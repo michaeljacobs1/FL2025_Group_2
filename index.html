@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Posts</title>
+    <style>
+      body { font: 16px/1.4 system-ui, sans-serif; max-width: 720px; margin: 2rem auto; }
+      form { margin: 1rem 0; }
+      input, textarea, button { display: block; width: 100%; margin: .5rem 0; }
+      li { margin: .75rem 0; }
+      #error { color: #b00020; margin-top: .5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Posts</h1>
+
+    <form id="createForm">
+  <input id="title" name="title" type="text" placeholder="Title" required>
+  <textarea id="content" name="body" placeholder="Body" required></textarea>
+  <button type="submit">Create Post</button>
+</form>
+
+
+    <div id="error" role="alert" aria-live="polite"></div>
+    <ul id="list"></ul>
+
+    <script>
+      const API = "http://127.0.0.1:8000/api/posts/";
+
+      function showError(msg) {
+        const el = document.getElementById("error");
+        el.textContent = msg || "";
+      }
+
+      function renderPosts(items) {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        for (const p of items) {
+          const li = document.createElement("li");
+          const strong = document.createElement("strong");
+          strong.textContent = p.title ?? "(no title)";
+          li.appendChild(strong);
+          li.appendChild(document.createElement("br"));
+          li.appendChild(document.createTextNode(p.body ?? ""));
+          list.appendChild(li);
+        }
+      }
+
+      async function loadPosts() {
+        showError("");
+        try {
+          const res = await fetch(API, {
+            headers: { "Accept": "application/json" },
+            mode: "cors",
+          });
+          if (!res.ok) throw new Error(`GET ${res.status} ${res.statusText}`);
+          const data = await res.json();
+          const items = Array.isArray(data) ? data : (data.results ?? []);
+          renderPosts(items);
+        } catch (err) {
+          showError(`Failed to load posts: ${err.message}`);
+          console.error(err);
+        }
+      }
+
+      document.getElementById("createForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        showError("");
+
+        const title = document.getElementById("title").value.trim();
+        const body  = document.getElementById("content").value.trim();
+        if (!title || !body) return;
+
+        try {
+          const res = await fetch(API, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify({ title, body }),
+            mode: "cors",
+            credentials: "omit"
+          });
+
+          if (!res.ok) {
+            const text = await res.text().catch(() => "");
+            throw new Error(`POST ${res.status} ${res.statusText}${text ? ` — ${text}` : ""}`);
+          }
+
+          e.target.reset();
+          await loadPosts();
+        } catch (err) {
+          showError(`Create failed: ${err.message}`);
+          console.error(err);
+        }
+      });
+
+      document.addEventListener("DOMContentLoaded", loadPosts);
+    </script>
+  </body>
+</html>
