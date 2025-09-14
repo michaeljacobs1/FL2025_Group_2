@@ -14,9 +14,3 @@ Our project focuses on helping people better understand their financial situatio
 
 ## How to Run
 The user will visit the website at <OurWebsiteURL.com> and make an account by setting a username and password. Then, the user will proceed to the first step of inputting their expected income over time, and continue with entering their expected expenses over time. Then, they are given a summary of their financial situation over time, and will be able to adjust sliders for factors such as average investment return, expected inflation rate, etc, to see how it affects their financial situation. 
-<<<<<<< HEAD
-test
-=======
-
-CHnage 
->>>>>>> 2547fcc6dc78ac0a245ad41c5168bb8e2d8692d1
