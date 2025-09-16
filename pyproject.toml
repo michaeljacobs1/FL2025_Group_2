@@ -1,0 +1,25 @@
+[tool.ruff]
+# Keep lines tidy; match Black default if you use it later.
+line-length = 88
+target-version = "py311"
+
+# Don't waste time linting generated/3rd-party stuff.
+extend-exclude = [
+  ".venv",
+  "venv",
+  "node_modules",
+  "migrations",   # Django generated
+  "static",       # if you collect static files
+]
+
+# You can speed Ruff up a lot on CI for big repos:
+cache-dir = ".ruff_cache"
+
+[tool.ruff.lint]
+# E: pycodestyle errors, F: pyflakes, I: import sorting (isort rules via Ruff)
+select = ["E", "F", "I"]
+# Example ignores — tweak as you like.
+ignore = ["E501"]  # often ignored when using a formatter to wrap lines
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "api"]  # add your own project packages/modules
