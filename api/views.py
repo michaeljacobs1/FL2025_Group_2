@@ -1,10 +1,10 @@
+from django.contrib.auth.forms import UserCreationForm
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
 from rest_framework import permissions, viewsets
 
 from .models import Post
 from .serializers import PostSerializer
-from django.contrib.auth.forms import UserCreationForm
-from django.urls import reverse_lazy
-from django.views.generic import CreateView
 
 
 class PostViewSet(viewsets.ModelViewSet):
