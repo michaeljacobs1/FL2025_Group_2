@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Home</title>
+    <!-- Django static CSS (make sure /static/styles.css exists) -->
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+  </head>
+  <body>
+    <h1>Home</h1>
+
+    {# Optional: show auth/messages feedback #}
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+      <p>Hello, {{ user.username }}!</p>
+
+      <form method="post" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit">Log out</button>
+      </form>
+
+      <p><a href="{% url 'password_change' %}">Change password</a></p>
+    {% else %}
+      <p><a href="{% url 'login' %}">Log in</a></p>
+
+    
+      <p><a href="{% url 'signup' %}">Sign up</a></p>
+
+      <p><a href="{% url 'password_reset' %}">Forgot password?</a></p>
+    {% endif %}
+  </body>
+</html>

@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "api",
 ]
 
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -60,7 +62,7 @@ ROOT_URLCONF = "backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -71,6 +73,9 @@ TEMPLATES = [
         },
     },
 ]
+
+LOGIN_REDIRECT_URL = "home"     # or "/" if you prefer a path
+LOGOUT_REDIRECT_URL = "login"
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
