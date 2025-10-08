@@ -2,9 +2,13 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    PostViewSet, SignUpView, FinancialDashboardView, 
-    PersonalInformationView, FinancialInformationView, 
-    IncomeTimelineView, ResultsView
+    FinancialDashboardView,
+    FinancialInformationView,
+    IncomeTimelineView,
+    PersonalInformationView,
+    PostViewSet,
+    ResultsView,
+    SignUpView,
 )
 
 router = DefaultRouter()

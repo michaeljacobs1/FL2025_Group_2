@@ -1,15 +1,21 @@
+from decimal import Decimal
+
+from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, TemplateView, UpdateView
 from django.views import View
+from django.views.generic import CreateView, TemplateView
 from rest_framework import permissions, viewsets
-from decimal import Decimal
-import json
 
-from .models import Post, PersonalInformation, IncomeEntry, FinancialProfile, ProjectionResult
+from .models import (
+    FinancialProfile,
+    IncomeEntry,
+    PersonalInformation,
+    Post,
+    ProjectionResult,
+)
 from .serializers import PostSerializer
 
 
@@ -180,18 +186,18 @@ class ResultsView(LoginRequiredMixin, View):
         net_worth = projected_valuation
         
         
-        projection = ProjectionResult.objects.create(
-            user=user,
-            total_invested=total_invested,
-            projected_years=projected_years,
-            projected_valuation=projected_valuation,
-            income_ratio=income_ratio,
-            investment_ratio=investment_ratio,
-            property_ratio=property_ratio,
-            real_estate_ratio=real_estate_ratio,
-            liabilities_ratio=liabilities_ratio,
-            net_worth=net_worth
-        )
+        # projection = ProjectionResult.objects.create(
+        #     user=user,
+        #     total_invested=total_invested,
+        #     projected_years=projected_years,
+        #     projected_valuation=projected_valuation,
+        #     income_ratio=income_ratio,
+        #     investment_ratio=investment_ratio,
+        #     property_ratio=property_ratio,
+        #     real_estate_ratio=real_estate_ratio,
+        #     liabilities_ratio=liabilities_ratio,
+        #     net_worth=net_worth
+        # )
         
         messages.success(request, f'Projection calculated for {projected_years} years!')
         return redirect('results')
