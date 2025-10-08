@@ -1,0 +1,143 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Timeline - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'income_timeline' %}" class="nav-link active">Income Timeline</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Income Over Time</h2>
+                <p>Track your income history to identify trends and patterns.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="timeline-section">
+                <div class="card">
+                    <h3>Add Income Entry</h3>
+                    <div class="card-content">
+                        <form method="post" class="income-form">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="year">Year:</label>
+                                    <select id="year" name="year" required>
+                                        <option value="">Select Year</option>
+                                        {% for year in "2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014"|split:"," %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="income_amount">Income Amount:</label>
+                                    <input type="number" id="income_amount" name="income_amount" 
+                                           step="0.01" min="0" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="income_source">Income Source:</label>
+                                    <select id="income_source" name="income_source">
+                                        <option value="Salary">Salary</option>
+                                        <option value="Freelance">Freelance</option>
+                                        <option value="Business">Business</option>
+                                        <option value="Investment">Investment</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">Add Income Entry</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Income Timeline (2014-2023)</h3>
+                    <div class="card-content">
+                        {% if income_entries %}
+                            <div class="timeline">
+                                <div class="timeline-years">
+                                    {% for year in "2014,2015,2016,2017,2018,2019,2020,2021,2022,2023"|split:"," %}
+                                        <div class="year-label">{{ year }}</div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="timeline-data">
+                                    {% for entry in income_entries %}
+                                        <div class="timeline-entry">
+                                            <div class="entry-year">{{ entry.year }}</div>
+                                            <div class="entry-amount">${{ entry.income_amount|floatformat:0 }}</div>
+                                            <div class="entry-source">{{ entry.income_source }}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="income-summary">
+                                <h4>Summary</h4>
+                                <div class="summary-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Total Entries:</span>
+                                        <span class="stat-value">{{ income_entries|length }}</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Latest Year:</span>
+                                        <span class="stat-value">{{ income_entries.last.year }}</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Highest Income:</span>
+                                        <span class="stat-value">${{ income_entries|dictsort:"income_amount"|last.income_amount|floatformat:0 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <p>No income data entered yet.</p>
+                                <p>Add your income history to see trends and patterns.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="navigation-actions">
+                <div class="action-buttons">
+                    <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
+                    <a href="{% url 'results' %}" class="btn-primary">View Results</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

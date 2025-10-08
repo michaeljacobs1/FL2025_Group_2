@@ -1,40 +1,113 @@
 {% load static %}
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Home</title>
-    <!-- Django static CSS (make sure /static/styles.css exists) -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyApp - Welcome</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
-  </head>
-  <body>
-    <h1>Home</h1>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">MyApp</h1>
+            <div class="nav-links">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+                    <a href="{% url 'profile' %}" class="nav-link">Profile</a>
+                    <form method="post" action="{% url 'logout' %}" class="logout-form">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn">Logout</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="nav-link">Login</a>
+                    <a href="{% url 'signup' %}" class="nav-link btn-primary">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
 
-    {# Optional: show auth/messages feedback #}
-    {% if messages %}
-      <ul class="messages">
-        {% for message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
+    <main class="main-content">
+        <div class="hero-section">
+            <div class="container">
+                {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                            <div class="message message-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
-    {% if user.is_authenticated %}
-      <p>Hello, {{ user.username }}!</p>
+                {% if user.is_authenticated %}
+                    <div class="welcome-back">
+                        <h1>Welcome back, {{ user.username }}!</h1>
+                        <p>You're successfully logged in. Ready to continue your journey?</p>
+                        <div class="action-buttons">
+                            <a href="{% url 'financial_dashboard' %}" class="btn-primary">Financial Planner</a>
+                            <a href="{% url 'dashboard' %}" class="btn-secondary">Dashboard</a>
+                            <a href="{% url 'profile' %}" class="btn-secondary">Profile</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="hero-content">
+                        <h1>Welcome to MyApp</h1>
+                        <p class="hero-subtitle">Your journey starts here. Join thousands of users who trust our platform.</p>
+                        <div class="hero-features">
+                            <div class="feature">
+                                <div class="feature-icon">💰</div>
+                                <h3>Financial Planning</h3>
+                                <p>Plan your financial future with our comprehensive tools</p>
+                            </div>
+                            <div class="feature">
+                                <div class="feature-icon">📊</div>
+                                <h3>Income Tracking</h3>
+                                <p>Track your income over time and identify trends</p>
+                            </div>
+                            <div class="feature">
+                                <div class="feature-icon">📈</div>
+                                <h3>Investment Projections</h3>
+                                <p>See your projected wealth growth with detailed analytics</p>
+                            </div>
+                        </div>
+                        <div class="cta-section">
+                            <a href="{% url 'signup' %}" class="btn-primary btn-large">Get Started</a>
+                            <a href="{% url 'login' %}" class="btn-secondary btn-large">Sign In</a>
+                        </div>
+                        <p class="help-text">
+                            <a href="{% url 'password_reset' %}">Forgot your password?</a>
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
 
-      <form method="post" action="{% url 'logout' %}" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit">Log out</button>
-      </form>
+        {% if not user.is_authenticated %}
+        <div class="info-section">
+            <div class="container">
+                <h2>Why Choose MyApp?</h2>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Easy to Use</h3>
+                        <p>Intuitive interface designed for users of all skill levels.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Secure & Reliable</h3>
+                        <p>Your data is safe with our robust security measures.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Always Available</h3>
+                        <p>Access your account from anywhere, anytime.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
 
-      <p><a href="{% url 'password_change' %}">Change password</a></p>
-    {% else %}
-      <p><a href="{% url 'login' %}">Log in</a></p>
-
-    
-      <p><a href="{% url 'signup' %}">Sign up</a></p>
-
-      <p><a href="{% url 'password_reset' %}">Forgot password?</a></p>
-    {% endif %}
-  </body>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 MyApp. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
 </html>

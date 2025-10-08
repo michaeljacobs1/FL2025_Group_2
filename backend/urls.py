@@ -24,7 +24,13 @@ from api.views import SignUpView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
-    path("", TemplateView.as_view(template_name="home.html"), name = "home"),
-    path("accounts/signup/", SignUpView.as_view(), name="signup"),  # <-- add this line
-    path ("accounts/", include("django.contrib.auth.urls")),
+    path("", TemplateView.as_view(template_name="home.html"), name="home"),
+    path("accounts/", include("accounts.urls")),
+    path("accounts/", include("django.contrib.auth.urls")),
+    # User journey pages
+    path("dashboard/", TemplateView.as_view(template_name="dashboard.html"), name="dashboard"),
+    path("profile/", TemplateView.as_view(template_name="profile.html"), name="profile"),
+    path("settings/", TemplateView.as_view(template_name="settings.html"), name="settings"),
+    # Financial Planning URLs
+    path("financial/", include("api.urls")),
 ]

@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">MyApp</h1>
+            <div class="nav-links">
+                <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'profile' %}" class="nav-link">Profile</a>
+                <a href="{% url 'settings' %}" class="nav-link active">Settings</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Account Settings</h2>
+                <p>Manage your account preferences and security settings.</p>
+            </div>
+
+            <div class="settings-section">
+                <div class="card">
+                    <h3>Security Settings</h3>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Change Password</h4>
+                                <p>Update your account password for better security.</p>
+                            </div>
+                            <a href="{% url 'password_change' %}" class="btn-secondary">Change Password</a>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Two-Factor Authentication</h4>
+                                <p>Add an extra layer of security to your account.</p>
+                            </div>
+                            <button class="btn-secondary" disabled>Coming Soon</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Privacy Settings</h3>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Email Notifications</h4>
+                                <p>Receive email updates about your account.</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Profile Visibility</h4>
+                                <p>Control who can see your profile information.</p>
+                            </div>
+                            <select class="setting-select">
+                                <option value="public">Public</option>
+                                <option value="friends">Friends Only</option>
+                                <option value="private">Private</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Account Management</h3>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Export Data</h4>
+                                <p>Download a copy of your account data.</p>
+                            </div>
+                            <button class="btn-secondary" disabled>Export Data</button>
+                        </div>
+                        <div class="setting-item danger">
+                            <div class="setting-info">
+                                <h4>Delete Account</h4>
+                                <p>Permanently delete your account and all associated data.</p>
+                            </div>
+                            <button class="btn-danger" disabled>Delete Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

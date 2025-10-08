@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Dashboard - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link active">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="welcome-section">
+                <h2>Welcome, {{ user.username }}!</h2>
+                <p>Your financial planning journey starts here.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Personal Information</h3>
+                    <div class="card-content">
+                        {% if personal_info.name %}
+                            <p><strong>Name:</strong> {{ personal_info.name }}</p>
+                            <p><strong>Email:</strong> {{ personal_info.email|default:"Not provided" }}</p>
+                            <p><strong>Phone:</strong> {{ personal_info.phone|default:"Not provided" }}</p>
+                            <div class="status-indicator completed">✓ Completed</div>
+                        {% else %}
+                            <p>Personal information not yet provided.</p>
+                            <div class="status-indicator pending">⚠ Pending</div>
+                        {% endif %}
+                        <a href="{% url 'personal_info' %}" class="action-btn">{% if personal_info.name %}Edit{% else %}Complete{% endif %}</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Financial Information</h3>
+                    <div class="card-content">
+                        {% if financial_profile.monthly_income %}
+                            <p><strong>Monthly Income:</strong> ${{ financial_profile.monthly_income|floatformat:2 }}</p>
+                            <p><strong>Savings Rate:</strong> {{ financial_profile.current_savings_rate|default:"Not set" }}%</p>
+                            <div class="status-indicator completed">✓ Completed</div>
+                        {% else %}
+                            <p>Financial information not yet provided.</p>
+                            <div class="status-indicator pending">⚠ Pending</div>
+                        {% endif %}
+                        <a href="{% url 'financial_info' %}" class="action-btn">{% if financial_profile.monthly_income > 0 %}Edit{% else %}Complete{% endif %}</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Income Timeline</h3>
+                    <div class="card-content">
+                        <p>Track your income over time to see trends and patterns.</p>
+                        <div class="status-indicator {% if income_entries %}completed{% else %}pending{% endif %}">
+                            {% if income_entries %}✓ {{ income_entries|length }} entries{% else %}⚠ No data{% endif %}
+                        </div>
+                        <a href="{% url 'income_timeline' %}" class="action-btn">{% if income_entries %}View/Edit{% else %}Add Data{% endif %}</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Projections & Results</h3>
+                    <div class="card-content">
+                        <p>View your financial projections and investment results.</p>
+                        <div class="status-indicator {% if recent_projections %}completed{% else %}pending{% endif %}">
+                            {% if recent_projections %}✓ {{ recent_projections|length }} projections{% else %}⚠ No projections{% endif %}
+                        </div>
+                        <a href="{% url 'results' %}" class="action-btn">View Results</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <a href="{% url 'personal_info' %}" class="btn-primary">Complete Personal Info</a>
+                    <a href="{% url 'financial_info' %}" class="btn-primary">Add Financial Data</a>
+                    <a href="{% url 'results' %}" class="btn-secondary">Run Projections</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

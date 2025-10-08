@@ -40,8 +40,9 @@ INSTALLED_APPS = [
     # third-party apps
     "rest_framework",
     "corsheaders",
-    # your app
+    # your apps
     "api",
+    "accounts",
 ]
 
 STATICFILES_DIRS = [BASE_DIR / "static"]

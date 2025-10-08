@@ -1,0 +1,211 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projected Income/Results - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <a href="{% url 'results' %}" class="nav-link active">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Projected Income/Results</h2>
+                <p>View your financial projections and investment analysis.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="results-section">
+                <div class="card">
+                    <h3>Run New Projection</h3>
+                    <div class="card-content">
+                        <form method="post" class="projection-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="projected_years">Projected Years:</label>
+                                <input type="number" id="projected_years" name="projected_years" 
+                                       value="10" min="1" max="50" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Run Simulation</button>
+                        </form>
+                    </div>
+                </div>
+
+                {% if projections %}
+                    {% for projection in projections %}
+                    <div class="card">
+                        <h3>Projection Results ({{ projection.projected_years }} years)</h3>
+                        <div class="card-content">
+                            <div class="projection-summary">
+                                <div class="summary-item">
+                                    <span class="summary-label">Total Invested/Placed:</span>
+                                    <span class="summary-value">${{ projection.total_invested|floatformat:2 }}</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Projected Valuation in {{ projection.projected_years }} years:</span>
+                                    <span class="summary-value">${{ projection.projected_valuation|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="card">
+                    <h3>Financial Ratios</h3>
+                    <div class="card-content">
+                        {% if projections %}
+                            {% with projection=projections.first %}
+                            <div class="ratios-grid">
+                                <div class="ratio-item">
+                                    <span class="ratio-label">Income:</span>
+                                    <span class="ratio-value">{{ projection.income_ratio }}%</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span class="ratio-label">Investments:</span>
+                                    <span class="ratio-value">{{ projection.investment_ratio }}%</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span class="ratio-label">Property:</span>
+                                    <span class="ratio-value">{{ projection.property_ratio }}%</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span class="ratio-label">Real Estate:</span>
+                                    <span class="ratio-value">{{ projection.real_estate_ratio }}%</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span class="ratio-label">Liabilities:</span>
+                                    <span class="ratio-value">{{ projection.liabilities_ratio }}%</span>
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% else %}
+                            <p>No projections available. Run a simulation to see your financial ratios.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Net Worth Projection</h3>
+                    <div class="card-content">
+                        {% if projections %}
+                            <div class="chart-container">
+                                <canvas id="netWorthChart" width="400" height="200"></canvas>
+                            </div>
+                            <div class="chart-navigation">
+                                <button class="chart-btn" onclick="previousPeriod()">← Previous</button>
+                                <span class="chart-period">Current Period</span>
+                                <button class="chart-btn" onclick="nextPeriod()">Next →</button>
+                            </div>
+                        {% else %}
+                            <div class="empty-chart">
+                                <p>No data available for chart display.</p>
+                                <p>Run a projection to see your net worth growth over time.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="navigation-actions">
+                <div class="action-buttons">
+                    <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
+                    <a href="{% url 'financial_info' %}" class="btn-primary">Update Financial Info</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% if projections %}
+    <script>
+        // Net Worth Chart
+        const ctx = document.getElementById('netWorthChart').getContext('2d');
+        const netWorthData = [
+            {% for projection in projections %}
+                {{ projection.net_worth|floatformat:0 }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        const years = [
+            {% for projection in projections %}
+                {{ projection.projected_years }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        const netWorthChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: years.map(year => `Year ${year}`),
+                datasets: [{
+                    label: 'Net Worth',
+                    data: netWorthData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Projected Net Worth Growth'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        function previousPeriod() {
+            // Implementation for previous period navigation
+            console.log('Previous period');
+        }
+
+        function nextPeriod() {
+            // Implementation for next period navigation
+            console.log('Next period');
+        }
+    </script>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Information - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link active">Financial Info</a>
+                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Financial Information</h2>
+                <p>Provide your current financial situation to enable accurate projections.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="financial-sections">
+                <div class="card">
+                    <h3>Income</h3>
+                    <div class="card-content">
+                        <form method="post" class="financial-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="monthly_income">Monthly Income:</label>
+                                <input type="number" id="monthly_income" name="monthly_income" 
+                                       value="{{ financial_profile.monthly_income|default:'' }}" 
+                                       step="0.01" min="0" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="monthly_expenses">Monthly Expenses:</label>
+                                <input type="number" id="monthly_expenses" name="monthly_expenses" 
+                                       value="{{ financial_profile.monthly_expenses|default:'' }}" 
+                                       step="0.01" min="0" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="savings_rate">Current Savings Rate (%):</label>
+                                <input type="number" id="savings_rate" name="savings_rate" 
+                                       value="{{ financial_profile.current_savings_rate|default:'' }}" 
+                                       step="0.01" min="0" max="100" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="current_savings">Current Savings:</label>
+                                <input type="number" id="current_savings" name="current_savings" 
+                                       value="{{ financial_profile.current_savings|default:'' }}" 
+                                       step="0.01" min="0" required>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">Save Financial Info</button>
+                                <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Current Savings Rate</h3>
+                    <div class="card-content">
+                        <p>Your savings rate is the percentage of your income that you save each month.</p>
+                        <div class="info-box">
+                            <p><strong>Formula:</strong> (Monthly Income - Monthly Expenses) / Monthly Income × 100</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Spending Habits & Future Goals</h3>
+                    <div class="card-content">
+                        <form method="post" class="goals-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="investment_goals">Investment Goals:</label>
+                                <textarea id="investment_goals" name="investment_goals" rows="3" 
+                                          placeholder="Describe your investment objectives...">{{ financial_profile.investment_goals|default:'' }}</textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="retirement_goals">Retirement Goals:</label>
+                                <textarea id="retirement_goals" name="retirement_goals" rows="3" 
+                                          placeholder="Describe your retirement planning goals...">{{ financial_profile.retirement_goals|default:'' }}</textarea>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">Save Goals</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="next-steps">
+                <h3>Next Steps</h3>
+                <div class="action-buttons">
+                    <a href="{% url 'income_timeline' %}" class="btn-primary">Add Income Timeline</a>
+                    <a href="{% url 'results' %}" class="btn-secondary">View Projections</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">MyApp</h1>
+            <div class="nav-links">
+                <a href="{% url 'dashboard' %}" class="nav-link active">Dashboard</a>
+                <a href="{% url 'profile' %}" class="nav-link">Profile</a>
+                <a href="{% url 'settings' %}" class="nav-link">Settings</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="welcome-section">
+                <h2>Welcome back, {{ user.username }}!</h2>
+                <p>Here's what's happening with your account.</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Account Overview</h3>
+                    <div class="card-content">
+                        <p><strong>Username:</strong> {{ user.username }}</p>
+                        <p><strong>Email:</strong> {{ user.email|default:"Not provided" }}</p>
+                        <p><strong>Member since:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
+                        <p><strong>Last login:</strong> {{ user.last_login|date:"F d, Y g:i A"|default:"Never" }}</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Quick Actions</h3>
+                    <div class="card-content">
+                        <a href="{% url 'profile' %}" class="action-btn">Edit Profile</a>
+                        <a href="{% url 'password_change' %}" class="action-btn">Change Password</a>
+                        <a href="{% url 'settings' %}" class="action-btn">Account Settings</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Recent Activity</h3>
+                    <div class="card-content">
+                        <p>No recent activity to display.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
