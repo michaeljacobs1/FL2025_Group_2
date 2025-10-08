@@ -35,6 +35,14 @@ urlpatterns = [
     path("financial-info/", FinancialInformationView.as_view(), name="financial_info"),
     path("income-timeline/", IncomeTimelineView.as_view(), name="income_timeline"),
     path("results/", ResultsView.as_view(), name="results"),
-    path("projection/<int:projection_id>/", ProjectionDetailView.as_view(), name="projection_detail"),
-    path("scenario-comparison/", ScenarioComparisonView.as_view(), name="scenario_comparison"),
+    path(
+        "projection/<int:projection_id>/",
+        ProjectionDetailView.as_view(),
+        name="projection_detail",
+    ),
+    path(
+        "scenario-comparison/",
+        ScenarioComparisonView.as_view(),
+        name="scenario_comparison",
+    ),
 ]

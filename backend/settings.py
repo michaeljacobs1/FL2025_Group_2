@@ -75,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-LOGIN_REDIRECT_URL = "home"     # or "/" if you prefer a path
+LOGIN_REDIRECT_URL = "home"  # or "/" if you prefer a path
 LOGOUT_REDIRECT_URL = "login"
 
 WSGI_APPLICATION = "backend.wsgi.application"
