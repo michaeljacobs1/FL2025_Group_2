@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scenario Comparison - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Scenario Comparison</h2>
+                <p>Compare different investment scenarios side by side.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if not comparisons %}
+            <div class="comparison-setup">
+                <div class="card">
+                    <h3>Select Scenarios to Compare</h3>
+                    <div class="card-content">
+                        <form method="post" class="comparison-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="projected_years">Projected Years:</label>
+                                <input type="number" id="projected_years" name="projected_years" 
+                                       value="10" min="1" max="50" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Select Scenarios (choose at least 2):</label>
+                                <div class="scenario-checkboxes">
+                                    {% for scenario in scenarios %}
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="scenario_ids" value="{{ scenario.id }}">
+                                        <span class="checkmark"></span>
+                                        <div class="scenario-info">
+                                            <strong>{{ scenario.name }}</strong>
+                                            <small>{{ scenario.annual_return_rate }}% return, {{ scenario.risk_tolerance }} risk</small>
+                                        </div>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Compare Scenarios</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="comparison-results">
+                <div class="card">
+                    <h3>Scenario Comparison Results ({{ projected_years }} years)</h3>
+                    <div class="card-content">
+                        <div class="comparison-table">
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Scenario</th>
+                                        <th>Return Rate</th>
+                                        <th>Total Contributions</th>
+                                        <th>Total Gains</th>
+                                        <th>Final Value</th>
+                                        <th>ROI</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for comparison in comparisons %}
+                                    <tr>
+                                        <td>{{ comparison.scenario.name }}</td>
+                                        <td>{{ comparison.projection.annual_return_rate }}%</td>
+                                        <td>${{ comparison.projection.total_contributions|floatformat:2 }}</td>
+                                        <td>${{ comparison.projection.total_gains|floatformat:2 }}</td>
+                                        <td>${{ comparison.projection.projected_valuation|floatformat:2 }}</td>
+                                        <td>{{ comparison.projection.return_on_investment|floatformat:1 }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Visual Comparison</h3>
+                    <div class="card-content">
+                        <div class="chart-container">
+                            <canvas id="comparisonChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Key Insights</h3>
+                    <div class="card-content">
+                        <div class="insights-grid">
+                            {% for comparison in comparisons %}
+                            <div class="insight-item">
+                                <h4>{{ comparison.scenario.name }}</h4>
+                                <ul>
+                                    <li><strong>Final Value:</strong> ${{ comparison.projection.projected_valuation|floatformat:2 }}</li>
+                                    <li><strong>Total Gains:</strong> ${{ comparison.projection.total_gains|floatformat:2 }}</li>
+                                    <li><strong>ROI:</strong> {{ comparison.projection.return_on_investment|floatformat:1 }}%</li>
+                                    <li><strong>Risk Level:</strong> {{ comparison.scenario.risk_tolerance|title }}</li>
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="navigation-actions">
+                <div class="action-buttons">
+                    <a href="{% url 'results' %}" class="btn-secondary">Back to Results</a>
+                    <a href="{% url 'financial_dashboard' %}" class="btn-primary">Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% if comparisons %}
+    <script>
+        // Comparison Chart
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        const scenarios = [
+            {% for comparison in comparisons %}
+                "{{ comparison.scenario.name }}"{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        const finalValues = [
+            {% for comparison in comparisons %}
+                {{ comparison.projection.projected_valuation|floatformat:0 }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        const contributions = [
+            {% for comparison in comparisons %}
+                {{ comparison.projection.total_contributions|floatformat:0 }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        const comparisonChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: scenarios,
+                datasets: [{
+                    label: 'Final Value',
+                    data: finalValues,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1
+                }, {
+                    label: 'Total Contributions',
+                    data: contributions,
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: '#10b981',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Scenario Comparison - Final Values vs Contributions'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>
+

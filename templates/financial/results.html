@@ -47,6 +47,16 @@
                     <div class="card-content">
                         <form method="post" class="projection-form">
                             {% csrf_token %}
+                            <input type="hidden" name="action" value="calculate">
+                            <div class="form-group">
+                                <label for="scenario_id">Scenario:</label>
+                                <select id="scenario_id" name="scenario_id" required>
+                                    <option value="">Select a scenario...</option>
+                                    {% for scenario in scenarios %}
+                                        <option value="{{ scenario.id }}">{{ scenario.name }} ({{ scenario.annual_return_rate }}% return)</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div class="form-group">
                                 <label for="projected_years">Projected Years:</label>
                                 <input type="number" id="projected_years" name="projected_years" 
@@ -57,19 +67,52 @@
                     </div>
                 </div>
 
+                <div class="card">
+                    <h3>Generate Sample Data</h3>
+                    <div class="card-content">
+                        <p>Generate sample financial data for demonstration purposes.</p>
+                        <form method="post" class="sample-data-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="generate_sample_data">
+                            <button type="submit" class="btn-secondary">Generate Sample Data</button>
+                        </form>
+                    </div>
+                </div>
+
                 {% if projections %}
                     {% for projection in projections %}
                     <div class="card">
-                        <h3>Projection Results ({{ projection.projected_years }} years)</h3>
+                        <h3>Projection Results - {{ projection.scenario.name|default:"Custom" }} ({{ projection.projected_years }} years)</h3>
                         <div class="card-content">
                             <div class="projection-summary">
-                                <div class="summary-item">
-                                    <span class="summary-label">Total Invested/Placed:</span>
-                                    <span class="summary-value">${{ projection.total_invested|floatformat:2 }}</span>
+                                <div class="summary-grid">
+                                    <div class="summary-item">
+                                        <span class="summary-label">Total Contributions:</span>
+                                        <span class="summary-value">${{ projection.total_contributions|default:projection.total_invested|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-label">Total Gains:</span>
+                                        <span class="summary-value">${{ projection.total_gains|default:0|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-label">Projected Valuation:</span>
+                                        <span class="summary-value">${{ projection.projected_valuation|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-label">Return on Investment:</span>
+                                        <span class="summary-value">{{ projection.return_on_investment|default:"N/A"|floatformat:1 }}%</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-label">Annual Return Rate:</span>
+                                        <span class="summary-value">{{ projection.annual_return_rate|default:"7.0" }}%</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-label">Monthly Contribution:</span>
+                                        <span class="summary-value">${{ projection.monthly_contribution|default:"0.00"|floatformat:2 }}</span>
+                                    </div>
                                 </div>
-                                <div class="summary-item">
-                                    <span class="summary-label">Projected Valuation in {{ projection.projected_years }} years:</span>
-                                    <span class="summary-value">${{ projection.projected_valuation|floatformat:2 }}</span>
+                                <div class="projection-actions">
+                                    <a href="{% url 'projection_detail' projection.id %}" class="btn-primary">View Details</a>
                                 </div>
                             </div>
                         </div>
@@ -136,6 +179,7 @@
             <div class="navigation-actions">
                 <div class="action-buttons">
                     <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
+                    <a href="{% url 'scenario_comparison' %}" class="btn-secondary">Compare Scenarios</a>
                     <a href="{% url 'financial_info' %}" class="btn-primary">Update Financial Info</a>
                 </div>
             </div>
@@ -209,3 +253,4 @@
     {% endif %}
 </body>
 </html>
+
