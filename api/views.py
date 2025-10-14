@@ -8,8 +8,6 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, TemplateView
 from rest_framework import permissions, viewsets
-from .projection_service import ProjectionCalculator
-from .models import ProjectionScenario, ProjectionResult, ProjectionYearlyData
 
 from .models import (
     FinancialProfile,
@@ -18,6 +16,7 @@ from .models import (
     Post,
     ProjectionResult,
     ProjectionScenario,
+    ProjectionYearlyData,
 )
 from .projection_service import DataGenerator, ProjectionCalculator
 from .serializers import (
@@ -228,8 +227,8 @@ class FinancialInformationView(LoginRequiredMixin, View):
         financial_profile.save()
 
         messages.success(request, "Financial information updated successfully!")
-        #return redirect("financial_info")
-        #new
+        # return redirect("financial_info")
+        # new
         calculator = ProjectionCalculator(request.user)
         if not ProjectionScenario.objects.filter(user=request.user).exists():
             calculator.create_default_scenarios()
@@ -275,64 +274,63 @@ class ResultsView(LoginRequiredMixin, View):
     # template_name = "financial/results.html"
 
     def get(self, request):
-    #     user = request.user
+        #     user = request.user
 
-    #     try:
-    #         financial_profile = FinancialProfile.objects.get(user=user)
-    #     except FinancialProfile.DoesNotExist:
-    #         messages.warning(
-    #             request, "Please complete your financial information first."
-    #         )
-    #         return redirect("financial_info")
+        #     try:
+        #         financial_profile = FinancialProfile.objects.get(user=user)
+        #     except FinancialProfile.DoesNotExist:
+        #         messages.warning(
+        #             request, "Please complete your financial information first."
+        #         )
+        #         return redirect("financial_info")
 
-    #     # Get projections and scenarios (handle case where new fields don't exist yet)
-    #     try:
-    #         # Use only() to avoid accessing new fields that might not exist
-    #         projections = (
-    #             ProjectionResult.objects.filter(user=user)
-    #             .only(
-    #                 "id",
-    #                 "total_invested",
-    #                 "projected_years",
-    #                 "projected_valuation",
-    #                 "income_ratio",
-    #                 "investment_ratio",
-    #                 "property_ratio",
-    #                 "real_estate_ratio",
-    #                 "liabilities_ratio",
-    #                 "net_worth",
-    #                 "created_at",
-    #             )
-    #             .order_by("-created_at")
-    #         )
-    #         scenarios = ProjectionScenario.objects.filter(user=user)
+        #     # Get projections and scenarios (handle case where new fields don't exist yet)
+        #     try:
+        #         # Use only() to avoid accessing new fields that might not exist
+        #         projections = (
+        #             ProjectionResult.objects.filter(user=user)
+        #             .only(
+        #                 "id",
+        #                 "total_invested",
+        #                 "projected_years",
+        #                 "projected_valuation",
+        #                 "income_ratio",
+        #                 "investment_ratio",
+        #                 "property_ratio",
+        #                 "real_estate_ratio",
+        #                 "liabilities_ratio",
+        #                 "net_worth",
+        #                 "created_at",
+        #             )
+        #             .order_by("-created_at")
+        #         )
+        #         scenarios = ProjectionScenario.objects.filter(user=user)
 
-    #         # If no scenarios exist, create default ones
-    #         if not scenarios.exists():
-    #             calculator = ProjectionCalculator(user)
-    #             calculator.create_default_scenarios()
-    #             scenarios = ProjectionScenario.objects.filter(user=user)
-    #     except Exception as e:
-    #         print(f"Error loading projections/scenarios: {e}")
-    #         projections = []
-    #         scenarios = []
+        #         # If no scenarios exist, create default ones
+        #         if not scenarios.exists():
+        #             calculator = ProjectionCalculator(user)
+        #             calculator.create_default_scenarios()
+        #             scenarios = ProjectionScenario.objects.filter(user=user)
+        #     except Exception as e:
+        #         print(f"Error loading projections/scenarios: {e}")
+        #         projections = []
+        #         scenarios = []
 
-    #     return render(
-    #         request,
-    #         self.template_name,
-    #         {
-    #             "financial_profile": financial_profile,
-    #             "projections": projections,
-    #             "scenarios": scenarios,
-    #         },
-    #     )
+        #     return render(
+        #         request,
+        #         self.template_name,
+        #         {
+        #             "financial_profile": financial_profile,
+        #             "projections": projections,
+        #             "scenarios": scenarios,
+        #         },
+        #     )
         scenarios = ProjectionScenario.objects.filter(user=request.user).order_by("id")
 
         latest_by_scenario = []
         for sc in scenarios:
             latest = (
-                ProjectionResult.objects
-                .filter(user=request.user, scenario=sc)
+                ProjectionResult.objects.filter(user=request.user, scenario=sc)
                 .order_by("-created_at")
                 .first()
             )
@@ -343,15 +341,18 @@ class ResultsView(LoginRequiredMixin, View):
         if latest_by_scenario:
             target_sid = request.GET.get("scenario")
             active = (
-                next((r for r in latest_by_scenario if str(r.scenario_id) == target_sid), latest_by_scenario[0])
-                if target_sid else latest_by_scenario[0]
+                next(
+                    (r for r in latest_by_scenario if str(r.scenario_id) == target_sid),
+                    latest_by_scenario[0],
+                )
+                if target_sid
+                else latest_by_scenario[0]
             )
 
         yearly = []
         if active:
             yearly = list(
-                ProjectionYearlyData.objects
-                .filter(projection=active)
+                ProjectionYearlyData.objects.filter(projection=active)
                 .order_by("year")
                 .values(
                     "year",
