@@ -75,7 +75,9 @@ TEMPLATES = [
     },
 ]
 
-LOGIN_REDIRECT_URL = "financial_dashboard"  # Redirect to financial dashboard after login
+LOGIN_REDIRECT_URL = (
+    "financial_dashboard"  # Redirect to financial dashboard after login
+)
 LOGOUT_REDIRECT_URL = "login"
 
 WSGI_APPLICATION = "backend.wsgi.application"
