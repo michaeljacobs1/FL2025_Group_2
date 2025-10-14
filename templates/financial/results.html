@@ -16,7 +16,7 @@
                 <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
                 <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
-                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <!-- <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a> -->
                 <a href="{% url 'results' %}" class="nav-link active">Results</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
@@ -80,6 +80,9 @@
                 </div>
 
                 {% if projections %}
+                    {% if active_result %}
+                        {{ yearly|json_script:"yearly-data" }}
+                    {% endif %}
                     {% for projection in projections %}
                     <div class="card">
                         <h3>Projection Results - {{ projection.scenario.name|default:"Custom" }} ({{ projection.projected_years }} years)</h3>
@@ -120,7 +123,7 @@
                     {% endfor %}
                 {% endif %}
 
-                <div class="card">
+                <!-- <div class="card">
                     <h3>Financial Ratios</h3>
                     <div class="card-content">
                         {% if projections %}
@@ -150,6 +153,37 @@
                             {% endwith %}
                         {% else %}
                             <p>No projections available. Run a simulation to see your financial ratios.</p>
+                        {% endif %}
+                    </div>
+                </div> -->
+                <div class="card">
+                    <h3>Financial Ratios</h3>
+                    <div class="card-content">
+                        {% if active_result %}
+                        <div class="ratios-grid">
+                            <div class="ratio-item">
+                            <span class="ratio-label">Income:</span>
+                            <span class="ratio-value">{{ active_result.income_ratio|default_if_none:"0"|floatformat:1 }}%</span>
+                            </div>
+                            <div class="ratio-item">
+                            <span class="ratio-label">Investments:</span>
+                            <span class="ratio-value">{{ active_result.investment_ratio|default_if_none:"0"|floatformat:1 }}%</span>
+                            </div>
+                            <div class="ratio-item">
+                            <span class="ratio-label">Property:</span>
+                            <span class="ratio-value">{{ active_result.property_ratio|default_if_none:"0"|floatformat:1 }}%</span>
+                            </div>
+                            <div class="ratio-item">
+                            <span class="ratio-label">Real Estate:</span>
+                            <span class="ratio-value">{{ active_result.real_estate_ratio|default_if_none:"0"|floatformat:1 }}%</span>
+                            </div>
+                            <div class="ratio-item">
+                            <span class="ratio-label">Liabilities:</span>
+                            <span class="ratio-value">{{ active_result.liabilities_ratio|default_if_none:"0"|floatformat:1 }}%</span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p>No projections available. Run a simulation to see your financial ratios.</p>
                         {% endif %}
                     </div>
                 </div>
@@ -187,7 +221,7 @@
     </main>
 
     {% if projections %}
-    <script>
+    <!-- <script>
         // Net Worth Chart
         const ctx = document.getElementById('netWorthChart').getContext('2d');
         const netWorthData = [
@@ -249,7 +283,55 @@
             // Implementation for next period navigation
             console.log('Next period');
         }
+    </script> -->
+    {% if active_result %}
+        {{ yearly|json_script:"yearly-data" }}
+    {% endif %}
+    <script>
+        {% if active_result %}
+        // Parse the year-by-year data (numbers come through as numbers)
+        const yearly = JSON.parse(document.getElementById("yearly-data").textContent);
+
+        const labels        = yearly.map(d => `Year ${d.year}`);
+        const netWorth      = yearly.map(d => Number(d.ending_balance));                // main line
+        const realNetWorth  = yearly.map(d => Number(d.inflation_adjusted_balance));    // optional second line
+
+        const ctx = document.getElementById('netWorthChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+            labels,
+            datasets: [
+                { label: 'Projected Net Worth', data: netWorth,  borderWidth: 2, fill: false, tension: 0.35 },
+                { label: 'Inflation-Adjusted',  data: realNetWorth, borderWidth: 2, fill: false, tension: 0.35 }
+            ]
+            },
+            options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Projected Net Worth Growth' },
+                legend: { display: true }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year' } },
+                y: {
+                beginAtZero: true,
+                ticks: { callback: v => '$' + Number(v).toLocaleString() },
+                title: { display: true, text: 'Net Worth ($)' }
+                }
+            }
+            }
+        });
+        {% else %}
+        // no active result yet
+        {% endif %}
+
+        // (Optional) keep your next/prev stubs if you want
+        function previousPeriod() {}
+        function nextPeriod() {}
     </script>
+
+
     {% endif %}
 </body>
 </html>

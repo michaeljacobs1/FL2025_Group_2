@@ -15,7 +15,7 @@
                 <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
                 <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link active">Financial Info</a>
-                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <!-- <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a> -->
                 <a href="{% url 'results' %}" class="nav-link">Results</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
@@ -120,7 +120,7 @@
             <div class="next-steps">
                 <h3>Next Steps</h3>
                 <div class="action-buttons">
-                    <a href="{% url 'income_timeline' %}" class="btn-primary">Add Income Timeline</a>
+                    <!-- <a href="{% url 'income_timeline' %}" class="btn-primary">Add Income Timeline</a> -->
                     <a href="{% url 'results' %}" class="btn-secondary">View Projections</a>
                 </div>
             </div>

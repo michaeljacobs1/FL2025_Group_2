@@ -1,18 +1,51 @@
 {% load static %}
-<!doctype html>
-<html>
-  <head>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
-    <meta charset="utf-8">
-    <title>Sign up</title>
-  </head>
-  <body>
-    <h2>Sign up</h2>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Create account</button>
-    </form>
-    <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account - MyApp</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="{% url 'home' %}" class="nav-brand">MyApp</a>
+      <div class="nav-links">
+        <a href="{% url 'home' %}" class="nav-link">Home</a>
+        <a href="{% url 'login' %}" class="nav-link">Sign In</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <h2>Create your account</h2>
+        <p>Sign up to start planning your finances.</p>
+      </div>
+
+      {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+            <div class="message message-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="card" style="max-width: 520px; margin: 0 auto;">
+        <div class="card-content">
+          <form method="post" class="profile-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div style="display:flex; gap:.5rem; align-items:center; justify-content:flex-end; margin-top:1rem;">
+              <button type="submit" class="btn-primary">Create Account</button>
+            </div>
+          </form>
+          <p class="help-text" style="margin-top:1rem;">Already have an account? <a href="{% url 'login' %}" style="color:#1e40af;" >Sign in</a></p>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
 </html>
