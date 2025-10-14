@@ -81,3 +81,4 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.ERROR(f"Error generating sample data: {str(e)}")
             )
+

@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyApp - Welcome</title>
+    <title>Financial Planner - Welcome</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <h1 class="nav-brand">MyApp</h1>
+            <h1 class="nav-brand">Financial Planner</h1>
             <div class="nav-links">
                 {% if user.is_authenticated %}
                     <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
@@ -39,74 +39,38 @@
                 {% endif %}
 
                 {% if user.is_authenticated %}
+                    <script>
+                        // Redirect authenticated users directly to financial dashboard
+                        window.location.href = "{% url 'financial_dashboard' %}";
+                    </script>
                     <div class="welcome-back">
                         <h1>Welcome back, {{ user.username }}!</h1>
-                        <p>You're successfully logged in. Ready to continue your journey?</p>
+                        <p>Redirecting you to your financial dashboard...</p>
                         <div class="action-buttons">
-                            <a href="{% url 'financial_dashboard' %}" class="btn-primary">Financial Planner</a>
-                            <a href="{% url 'dashboard' %}" class="btn-secondary">Dashboard</a>
-                            <a href="{% url 'profile' %}" class="btn-secondary">Profile</a>
+                            <a href="{% url 'financial_dashboard' %}" class="btn-primary">Go to Financial Dashboard</a>
                         </div>
                     </div>
                 {% else %}
+                    <script>
+                        // Redirect unauthenticated users directly to login page
+                        window.location.href = "{% url 'login' %}";
+                    </script>
                     <div class="hero-content">
-                        <h1>Welcome to MyApp</h1>
-                        <p class="hero-subtitle">Your journey starts here. Join thousands of users who trust our platform.</p>
-                        <div class="hero-features">
-                            <div class="feature">
-                                <div class="feature-icon">💰</div>
-                                <h3>Financial Planning</h3>
-                                <p>Plan your financial future with our comprehensive tools</p>
-                            </div>
-                            <div class="feature">
-                                <div class="feature-icon">📊</div>
-                                <h3>Income Tracking</h3>
-                                <p>Track your income over time and identify trends</p>
-                            </div>
-                            <div class="feature">
-                                <div class="feature-icon">📈</div>
-                                <h3>Investment Projections</h3>
-                                <p>See your projected wealth growth with detailed analytics</p>
-                            </div>
-                        </div>
+                        <h1>Welcome to Financial Planner</h1>
+                        <p class="hero-subtitle">Redirecting you to the login page...</p>
                         <div class="cta-section">
-                            <a href="{% url 'signup' %}" class="btn-primary btn-large">Get Started</a>
-                            <a href="{% url 'login' %}" class="btn-secondary btn-large">Sign In</a>
+                            <a href="{% url 'login' %}" class="btn-primary btn-large">Go to Login</a>
                         </div>
-                        <p class="help-text">
-                            <a href="{% url 'password_reset' %}">Forgot your password?</a>
-                        </p>
                     </div>
                 {% endif %}
             </div>
         </div>
 
-        {% if not user.is_authenticated %}
-        <div class="info-section">
-            <div class="container">
-                <h2>Why Choose MyApp?</h2>
-                <div class="info-grid">
-                    <div class="info-card">
-                        <h3>Easy to Use</h3>
-                        <p>Intuitive interface designed for users of all skill levels.</p>
-                    </div>
-                    <div class="info-card">
-                        <h3>Secure & Reliable</h3>
-                        <p>Your data is safe with our robust security measures.</p>
-                    </div>
-                    <div class="info-card">
-                        <h3>Always Available</h3>
-                        <p>Access your account from anywhere, anytime.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </main>
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Financial Planner. All rights reserved.</p>
         </div>
     </footer>
 </body>

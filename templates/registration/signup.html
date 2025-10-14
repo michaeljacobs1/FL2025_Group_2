@@ -4,15 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create Account - MyApp</title>
+  <title>Create Account - Financial Planner</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
   <nav class="navbar">
     <div class="nav-container">
-      <a href="{% url 'home' %}" class="nav-brand">MyApp</a>
+      <a href="{% url 'home' %}" class="nav-brand">Financial Planner</a>
       <div class="nav-links">
-        <a href="{% url 'home' %}" class="nav-link">Home</a>
         <a href="{% url 'login' %}" class="nav-link">Sign In</a>
       </div>
     </div>
@@ -22,7 +21,7 @@
     <div class="container">
       <div class="page-header">
         <h2>Create your account</h2>
-        <p>Sign up to start planning your finances.</p>
+        <p>Sign up to start your financial planning journey.</p>
       </div>
 
       {% if messages %}

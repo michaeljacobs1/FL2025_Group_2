@@ -16,7 +16,6 @@
                 <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
                 <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
-                <!-- <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a> -->
                 <a href="{% url 'results' %}" class="nav-link active">Results</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
@@ -156,6 +155,7 @@
                         {% endif %}
                     </div>
                 </div> -->
+                <!-- Financial Ratios section - temporarily hidden
                 <div class="card">
                     <h3>Financial Ratios</h3>
                     <div class="card-content">
@@ -187,7 +187,9 @@
                         {% endif %}
                     </div>
                 </div>
+                -->
 
+                <!-- Net Worth Projection section - temporarily hidden
                 <div class="card">
                     <h3>Net Worth Projection</h3>
                     <div class="card-content">
@@ -208,6 +210,7 @@
                         {% endif %}
                     </div>
                 </div>
+                -->
             </div>
 
             <div class="navigation-actions">

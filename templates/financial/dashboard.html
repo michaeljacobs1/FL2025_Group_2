@@ -12,11 +12,9 @@
         <div class="nav-container">
             <h1 class="nav-brand">Financial Planner</h1>
             <div class="nav-links">
-                <a href="{% url 'dashboard' %}" class="nav-link">Site Dashboard</a>
-                <!-- <a href="{% url 'financial_dashboard' %}" class="nav-link active">Dashboard</a> -->
+                <a href="{% url 'financial_dashboard' %}" class="nav-link active">Dashboard</a>
                 <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
-                <!-- <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a> -->
                 <a href="{% url 'results' %}" class="nav-link">Results</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
@@ -73,16 +71,6 @@
                     </div>
                 </div>
 
-                <!-- <div class="card">
-                    <h3>Income Timeline</h3>
-                    <div class="card-content">
-                        <p>Track your income over time to see trends and patterns.</p>
-                        <div class="status-indicator {% if income_entries %}completed{% else %}pending{% endif %}">
-                            {% if income_entries %}✓ {{ income_entries|length }} entries{% else %}⚠ No data{% endif %}
-                        </div>
-                        <a href="{% url 'income_timeline' %}" class="action-btn">{% if income_entries %}View/Edit{% else %}Add Data{% endif %}</a>
-                    </div>
-                </div> -->
 
                 <div class="card">
                     <h3>Projections & Results</h3>
