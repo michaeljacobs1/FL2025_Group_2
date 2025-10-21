@@ -1,0 +1,9 @@
+services:
+    db: 
+        image: docker.io/mysql:latest
+        container_name: investments
+        environment:
+            - MYSQL_USER=user
+            - MYSQL_PASSWORD=password
+
+            
