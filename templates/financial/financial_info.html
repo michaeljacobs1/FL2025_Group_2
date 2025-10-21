@@ -40,78 +40,105 @@
             {% endif %}
 
             <div class="financial-sections">
-                <div class="card">
-                    <h3>Income</h3>
-                    <div class="card-content">
-                        <form method="post" class="financial-form">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="monthly_income">Monthly Income:</label>
-                                <input type="number" id="monthly_income" name="monthly_income" 
-                                       value="{{ financial_profile.monthly_income|default:'' }}" 
-                                       step="0.01" min="0" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="monthly_expenses">Monthly Expenses:</label>
-                                <input type="number" id="monthly_expenses" name="monthly_expenses" 
-                                       value="{{ financial_profile.monthly_expenses|default:'' }}" 
-                                       step="0.01" min="0" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="savings_rate">Current Savings Rate (%):</label>
-                                <input type="number" id="savings_rate" name="savings_rate" 
-                                       value="{{ financial_profile.current_savings_rate|default:'' }}" 
-                                       step="0.01" min="0" max="100" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="current_savings">Current Savings:</label>
-                                <input type="number" id="current_savings" name="current_savings" 
-                                       value="{{ financial_profile.current_savings|default:'' }}" 
-                                       step="0.01" min="0" required>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn-primary">Save Financial Info</button>
-                                <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>Current Savings Rate</h3>
-                    <div class="card-content">
-                        <p>Your savings rate is the percentage of your income that you save each month.</p>
-                        <div class="info-box">
-                            <p><strong>Formula:</strong> (Monthly Income - Monthly Expenses) / Monthly Income × 100</p>
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>Income Timeline (By Year)</h3>
+                        <div class="form-toolbar">
+                            <span class="pill">Manual or Growth-based</span>
                         </div>
                     </div>
-                </div>
 
-                <div class="card">
-                    <h3>Spending Habits & Future Goals</h3>
                     <div class="card-content">
-                        <form method="post" class="goals-form">
+                        <form method="post" id="yearlyForm" class="pretty-form">
                             {% csrf_token %}
-                            <div class="form-group">
-                                <label for="investment_goals">Investment Goals:</label>
-                                <textarea id="investment_goals" name="investment_goals" rows="3" 
-                                          placeholder="Describe your investment objectives...">{{ financial_profile.investment_goals|default:'' }}</textarea>
+                            <input type="hidden" name="income_mode" value="by_year">
+
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="startYear">Start Year</label>
+                                    <input class="input" id="startYear" type="number" value="{{ income_entries.0.year|default:2025 }}" min="1900" max="2200">
+                                </div>
+                                <div class="field">
+                                    <label for="yearsCount"># Years</label>
+                                    <input class="input" id="yearsCount" type="number" value="{{ income_entries|length|default:5 }}" min="1" max="200">
+                                </div>
+                                <div class="field">
+                                    <label for="baseIncome">Base Income</label>
+                                    <input class="input" id="baseIncome" type="number" step="0.01" placeholder="e.g. 50000">
+                                </div>
+                                <div class="field">
+                                    <label for="growthPct">Income growth %</label>
+                                    <input class="input" id="growthPct" type="number" step="0.01" placeholder="e.g. 3">
+                                </div>
                             </div>
-                            
-                            <div class="form-group">
-                                <label for="retirement_goals">Retirement Goals:</label>
-                                <textarea id="retirement_goals" name="retirement_goals" rows="3" 
-                                          placeholder="Describe your retirement planning goals...">{{ financial_profile.retirement_goals|default:'' }}</textarea>
+
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="baseSavings">Base savings rate %</label>
+                                    <input class="input" id="baseSavings" type="number" step="0.01" min="0" max="100" placeholder="e.g. 15">
+                                </div>
+                                <div class="field">
+                                    <label for="savingsGrowth">Savings rate growth %</label>
+                                    <input class="input" id="savingsGrowth" type="number" step="0.01" min="0" max="100" placeholder="e.g. 1">
+                                </div>
+                                <div class="field" style="align-self:end;">
+                                    <label class="checkbox-inline">
+                                        <input type="checkbox" id="useConstantRate" name="use_constant_rate" value="1">
+                                        Keep savings rate constant
+                                    </label>
+                                </div>
+                                <input type="hidden" id="constantRate" name="constant_rate_value">
                             </div>
-                            
+
+                            <div class="form-grid form-grid--inline">
+                                <div></div>
+                                <div class="toolbar-actions">
+                                    <button type="button" id="generateRows" class="btn-primary">Generate</button>
+                                    <button type="button" id="addRow" class="btn-secondary">+ Row</button>
+                                </div>
+                            </div>
+
+                            <div class="table-container">
+                                <table class="projection-table pretty-table" id="incomeTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:140px;">Year</th>
+                                            <th>Income (yearly)</th>
+                                            <th>Savings Rate %</th>
+                                            <th style="width:100px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if income_entries %}
+                                            {% for r in income_entries %}
+                                            <tr>
+                                                <td><input class="cell-input" name="year[]" type="number" value="{{ r.year }}" min="1900" max="2200" required></td>
+                                                <td><input class="cell-input" name="income[]" type="number" step="0.01" min="0" value="{{ r.income_amount }}" required></td>
+                                                <td><input class="cell-input" name="savings_rate_year[]" type="number" step="0.01" min="0" max="100" value="{{ r.savings_rate|default:'' }}"></td>
+                                                <td><button type="button" class="btn-danger remove-row">Remove</button></td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td><input class="cell-input" name="year[]" type="number" value="2025" min="1900" max="2200" required></td>
+                                                <td><input class="cell-input" name="income[]" type="number" step="0.01" min="0" placeholder="0.00" required></td>
+                                                <td><input class="cell-input" name="savings_rate_year[]" type="number" step="0.01" min="0" max="100" placeholder="0"></td>
+                                                <td><button type="button" class="btn-danger remove-row">Remove</button></td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+
                             <div class="form-actions">
-                                <button type="submit" class="btn-primary">Save Goals</button>
+                                <button type="submit" class="btn-primary">Save</button>
+                                <button type="submit" name="go_results" value="1" class="btn-secondary">Save & View Projections</button>
                             </div>
                         </form>
+
+                        <div class="info-box">
+                            <p><strong>Tips:</strong> “Generate” builds N rows from Start Year. If Base Income and <em>Income growth %</em> are provided, incomes compound from Base Income. To auto-fill savings rates, set a base rate and either keep it constant or provide a <em>Savings rate growth %</em>.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -119,12 +146,100 @@
             <div class="next-steps">
                 <h3>Next Steps</h3>
                 <div class="action-buttons">
-                    <!-- <a href="{% url 'income_timeline' %}" class="btn-primary">Add Income Timeline</a> -->
                     <a href="{% url 'results' %}" class="btn-secondary">View Projections</a>
                 </div>
             </div>
         </div>
     </main>
+
+    <script>
+    (function(){
+      const tbody = document.querySelector("#incomeTable tbody");
+      const addRowBtn = document.getElementById("addRow");
+      const genBtn = document.getElementById("generateRows");
+      const startYearEl = document.getElementById("startYear");
+      const yearsCountEl = document.getElementById("yearsCount");
+      const growthEl = document.getElementById("growthPct");
+      const baseIncomeEl = document.getElementById("baseIncome");
+
+      const baseSavingsEl = document.getElementById("baseSavings");
+      const savingsGrowthEl = document.getElementById("savingsGrowth");
+      const useConstEl = document.getElementById("useConstantRate");
+      const constRateHidden = document.getElementById("constantRate");
+
+      useConstEl.addEventListener("change", ()=>{
+        if(useConstEl.checked){
+          constRateHidden.value = baseSavingsEl.value || "";
+        }else{
+          constRateHidden.value = "";
+        }
+      });
+      baseSavingsEl.addEventListener("input", ()=>{
+        if(useConstEl.checked){
+          constRateHidden.value = baseSavingsEl.value || "";
+        }
+      });
+
+      function addRow(y, inc, rate){
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+            '<td><input class="cell-input" name="year[]" type="number" min="1900" max="2200" required></td>'
+          + '<td><input class="cell-input" name="income[]" type="number" step="0.01" min="0" required></td>'
+          + '<td><input class="cell-input" name="savings_rate_year[]" type="number" step="0.01" min="0" max="100"></td>'
+          + '<td><button type="button" class="btn-danger remove-row">Remove</button></td>';
+        tbody.appendChild(tr);
+        if (y !== undefined) tr.querySelector('input[name="year[]"]').value = y;
+        if (inc !== undefined) tr.querySelector('input[name="income[]"]').value = inc;
+        if (rate !== undefined && rate !== null && rate !== "") tr.querySelector('input[name="savings_rate_year[]"]').value = rate;
+      }
+
+      tbody.addEventListener("click", (e)=>{
+        if(e.target.classList.contains("remove-row")){
+          e.target.closest("tr").remove();
+        }
+      });
+
+      addRowBtn.addEventListener("click", ()=> addRow());
+
+      genBtn.addEventListener("click", ()=>{
+        const start = parseInt(startYearEl.value || "2025", 10);
+        const n = Math.max(1, Math.min(parseInt(yearsCountEl.value || "5", 10), 200));
+        const incomeGrowth = parseFloat(growthEl.value || "");
+        const baseIncome = parseFloat(baseIncomeEl.value || "");
+
+        const baseSavings = parseFloat(baseSavingsEl.value || "");
+        const savingsGrowth = parseFloat(savingsGrowthEl.value || "");
+        const keepConst = !!useConstEl.checked;
+
+        const rows = [];
+        for(let i=0;i<n;i++){
+          const yr = start + i;
+
+          let inc = "";
+          if(!isNaN(baseIncome) && !isNaN(incomeGrowth)){
+            inc = (baseIncome * Math.pow(1 + (incomeGrowth/100), i)).toFixed(2);
+          } else if(!isNaN(baseIncome) && isNaN(incomeGrowth)){
+            inc = baseIncome.toFixed(2);
+          }
+
+          let rate = "";
+          if(!isNaN(baseSavings)){
+            if(keepConst){
+              rate = baseSavings.toFixed(2);
+            }else if(!isNaN(savingsGrowth)){
+              rate = (baseSavings * Math.pow(1 + (savingsGrowth/100), i)).toFixed(2);
+            }else{
+              rate = baseSavings.toFixed(2);
+            }
+          }
+
+          rows.push({year: yr, income: inc, rate});
+        }
+
+        tbody.innerHTML = "";
+        rows.forEach(r => addRow(String(r.year), r.income, r.rate));
+      });
+    })();
+    </script>
 </body>
 </html>
-

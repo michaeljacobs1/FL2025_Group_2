@@ -75,9 +75,7 @@ TEMPLATES = [
     },
 ]
 
-LOGIN_REDIRECT_URL = (
-    "financial_dashboard"  # Redirect to financial dashboard after login
-)
+LOGIN_REDIRECT_URL = "home"  # or "/" if you prefer a path
 LOGOUT_REDIRECT_URL = "login"
 
 WSGI_APPLICATION = "backend.wsgi.application"
@@ -86,29 +84,26 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
-
+# --- USE SQLITE LOCALLY ---
 DATABASES = {
-    # "default": {
-    #    "ENGINE": "django.db.backends.sqlite3",
-    #    "NAME": BASE_DIR / "db.sqlite3",
-    # }
-    # }
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "appdb",
-        "USER": "appuser",
-        "PASSWORD": "strong-password",
-        "HOST": "localhost",
-        "PORT": "3306",
-        "OPTIONS": {"charset": "utf8mb4"},
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# --- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.mysql",
+#         "NAME": "appdb",
+#         "USER": "appuser",
+#         "PASSWORD": "strong-password",
+#         "HOST": "127.0.0.1",
+#         "PORT": "3306",
+#         "OPTIONS": {"charset": "utf8mb4"},
+#     }
+# }
 
 
 # Password validation

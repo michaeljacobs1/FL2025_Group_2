@@ -29,7 +29,7 @@
         <div class="container">
             <div class="page-header">
                 <h2>Projected Income/Results</h2>
-                <p>View your financial projections and investment analysis.</p>
+                <p>All years and values are derived from your entries on the Financial Info page.</p>
             </div>
 
             {% if messages %}
@@ -41,39 +41,30 @@
             {% endif %}
 
             <div class="results-section">
-                <div class="card">
-                    <h3>Run New Projection</h3>
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>Run Projection</h3>
+                        <div class="form-toolbar"><span class="pill">Uses your entered years</span></div>
+                    </div>
                     <div class="card-content">
-                        <form method="post" class="projection-form">
+                        <form method="post" class="pretty-form">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="calculate">
-                            <div class="form-group">
-                                <label for="scenario_id">Scenario:</label>
-                                <select id="scenario_id" name="scenario_id" required>
-                                    <option value="">Select a scenario...</option>
-                                    {% for scenario in scenarios %}
-                                        <option value="{{ scenario.id }}">{{ scenario.name }} ({{ scenario.annual_return_rate }}% return)</option>
-                                    {% endfor %}
-                                </select>
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="scenario_id">Scenario</label>
+                                    <select class="input" id="scenario_id" name="scenario_id" required>
+                                        <option value="">Select a scenario...</option>
+                                        {% for scenario in scenarios %}
+                                            <option value="{{ scenario.id }}">{{ scenario.name }} ({{ scenario.annual_return_rate }}% return)</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="projected_years">Projected Years:</label>
-                                <input type="number" id="projected_years" name="projected_years" 
-                                       value="10" min="1" max="50" required>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">Run Simulation</button>
+                                <a href="{% url 'financial_info' %}" class="btn-secondary">Edit Income Years</a>
                             </div>
-                            <button type="submit" class="btn-primary">Run Simulation</button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>Generate Sample Data</h3>
-                    <div class="card-content">
-                        <p>Generate sample financial data for demonstration purposes.</p>
-                        <form method="post" class="sample-data-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="generate_sample_data">
-                            <button type="submit" class="btn-secondary">Generate Sample Data</button>
                         </form>
                     </div>
                 </div>
@@ -90,15 +81,15 @@
                                 <div class="summary-grid">
                                     <div class="summary-item">
                                         <span class="summary-label">Total Contributions:</span>
-                                        <span class="summary-value">${{ projection.total_contributions|default:projection.total_invested|floatformat:2 }}</span>
+                                        <span class="summary-value money" data-value="{{ projection.total_contributions|default:projection.total_invested }}"></span>
                                     </div>
                                     <div class="summary-item">
                                         <span class="summary-label">Total Gains:</span>
-                                        <span class="summary-value">${{ projection.total_gains|default:0|floatformat:2 }}</span>
+                                        <span class="summary-value money" data-value="{{ projection.total_gains|default:0 }}"></span>
                                     </div>
                                     <div class="summary-item">
                                         <span class="summary-label">Projected Valuation:</span>
-                                        <span class="summary-value">${{ projection.projected_valuation|floatformat:2 }}</span>
+                                        <span class="summary-value money" data-value="{{ projection.projected_valuation }}"></span>
                                     </div>
                                     <div class="summary-item">
                                         <span class="summary-label">Return on Investment:</span>
@@ -110,7 +101,7 @@
                                     </div>
                                     <div class="summary-item">
                                         <span class="summary-label">Monthly Contribution:</span>
-                                        <span class="summary-value">${{ projection.monthly_contribution|default:"0.00"|floatformat:2 }}</span>
+                                        <span class="summary-value money" data-value="{{ projection.monthly_contribution|default:'0.00' }}"></span>
                                     </div>
                                 </div>
                                 <div class="projection-actions">
@@ -122,95 +113,32 @@
                     {% endfor %}
                 {% endif %}
 
-                <!-- <div class="card">
-                    <h3>Financial Ratios</h3>
-                    <div class="card-content">
-                        {% if projections %}
-                            {% with projection=projections.first %}
-                            <div class="ratios-grid">
-                                <div class="ratio-item">
-                                    <span class="ratio-label">Income:</span>
-                                    <span class="ratio-value">{{ projection.income_ratio }}%</span>
-                                </div>
-                                <div class="ratio-item">
-                                    <span class="ratio-label">Investments:</span>
-                                    <span class="ratio-value">{{ projection.investment_ratio }}%</span>
-                                </div>
-                                <div class="ratio-item">
-                                    <span class="ratio-label">Property:</span>
-                                    <span class="ratio-value">{{ projection.property_ratio }}%</span>
-                                </div>
-                                <div class="ratio-item">
-                                    <span class="ratio-label">Real Estate:</span>
-                                    <span class="ratio-value">{{ projection.real_estate_ratio }}%</span>
-                                </div>
-                                <div class="ratio-item">
-                                    <span class="ratio-label">Liabilities:</span>
-                                    <span class="ratio-value">{{ projection.liabilities_ratio }}%</span>
-                                </div>
-                            </div>
-                            {% endwith %}
-                        {% else %}
-                            <p>No projections available. Run a simulation to see your financial ratios.</p>
-                        {% endif %}
-                    </div>
-                </div> -->
-                <!-- Financial Ratios section - temporarily hidden
                 <div class="card">
-                    <h3>Financial Ratios</h3>
+                    <h3>Income Timeline (Entered Years)</h3>
                     <div class="card-content">
-                        {% if active_result %}
-                        <div class="ratios-grid">
-                            <div class="ratio-item">
-                            <span class="ratio-label">Income:</span>
-                            <span class="ratio-value">{{ active_result.income_ratio|default_if_none:"0"|floatformat:1 }}%</span>
-                            </div>
-                            <div class="ratio-item">
-                            <span class="ratio-label">Investments:</span>
-                            <span class="ratio-value">{{ active_result.investment_ratio|default_if_none:"0"|floatformat:1 }}%</span>
-                            </div>
-                            <div class="ratio-item">
-                            <span class="ratio-label">Property:</span>
-                            <span class="ratio-value">{{ active_result.property_ratio|default_if_none:"0"|floatformat:1 }}%</span>
-                            </div>
-                            <div class="ratio-item">
-                            <span class="ratio-label">Real Estate:</span>
-                            <span class="ratio-value">{{ active_result.real_estate_ratio|default_if_none:"0"|floatformat:1 }}%</span>
-                            </div>
-                            <div class="ratio-item">
-                            <span class="ratio-label">Liabilities:</span>
-                            <span class="ratio-value">{{ active_result.liabilities_ratio|default_if_none:"0"|floatformat:1 }}%</span>
-                            </div>
+                        <div class="chart-container">
+                            <canvas id="incomeTimelineChart" width="400" height="200"></canvas>
                         </div>
-                        {% else %}
-                        <p>No projections available. Run a simulation to see your financial ratios.</p>
+                        {% if income_entries %}
+                            {{ income_entries|json_script:"income-entries" }}
                         {% endif %}
                     </div>
                 </div>
-                -->
 
-                <!-- Net Worth Projection section - temporarily hidden
                 <div class="card">
-                    <h3>Net Worth Projection</h3>
+                    <h3>Net Worth Projection (Aligned to Entered Years)</h3>
                     <div class="card-content">
-                        {% if projections %}
-                            <div class="chart-container">
-                                <canvas id="netWorthChart" width="400" height="200"></canvas>
-                            </div>
-                            <div class="chart-navigation">
-                                <button class="chart-btn" onclick="previousPeriod()">← Previous</button>
-                                <span class="chart-period">Current Period</span>
-                                <button class="chart-btn" onclick="nextPeriod()">Next →</button>
-                            </div>
-                        {% else %}
-                            <div class="empty-chart">
-                                <p>No data available for chart display.</p>
-                                <p>Run a projection to see your net worth growth over time.</p>
-                            </div>
+                        <div class="chart-container">
+                            <canvas id="netWorthChart" width="400" height="200"></canvas>
+                        </div>
+                        {% if income_years %}
+                            {{ income_years|json_script:"income-years" }}
+                        {% endif %}
+                        {% if net_worth_series %}
+                            {{ net_worth_series|json_script:"net-worth-series" }}
                         {% endif %}
                     </div>
                 </div>
-                -->
             </div>
 
             <div class="navigation-actions">
@@ -223,119 +151,103 @@
         </div>
     </main>
 
-    {% if projections %}
-    <!-- <script>
-        // Net Worth Chart
-        const ctx = document.getElementById('netWorthChart').getContext('2d');
-        const netWorthData = [
-            {% for projection in projections %}
-                {{ projection.net_worth|floatformat:0 }}{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        ];
-        
-        const years = [
-            {% for projection in projections %}
-                {{ projection.projected_years }}{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        ];
+    <script>
+        (function(){
+            // Money formatting
+            document.querySelectorAll(".money").forEach(el=>{
+                const raw = parseFloat(el.getAttribute("data-value") || "0");
+                el.textContent = isNaN(raw) ? '$0.00' :
+                    '$' + raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            });
 
-        const netWorthChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: years.map(year => `Year ${year}`),
-                datasets: [{
-                    label: 'Net Worth',
-                    data: netWorthData,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Projected Net Worth Growth'
+            // Income timeline chart with exact years from your entries
+            const entriesEl = document.getElementById("income-entries");
+            const entries = entriesEl ? JSON.parse(entriesEl.textContent) : [];
+            const incomeLabels = entries.map(d => String(d.year));
+            const incomeValues = entries.map(d => Number(d.income_amount));
+
+            if (document.getElementById('incomeTimelineChart')) {
+                const ctx1 = document.getElementById('incomeTimelineChart').getContext('2d');
+                new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: incomeLabels,
+                        datasets: [{
+                            label: 'Income (yearly)',
+                            data: incomeValues,
+                            borderWidth: 2
+                        }]
                     },
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: true },
+                            title: { display: true, text: 'Income by Year (your entries)' },
+                            tooltip: {
+                                callbacks: {
+                                    label: (c)=>{
+                                        const v = Number(c.parsed.y || 0);
+                                        return 'Income: $' + v.toLocaleString(undefined, {maximumFractionDigits: 2});
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { callback: (v)=>'$' + Number(v).toLocaleString() }
                             }
                         }
                     }
-                }
+                });
             }
-        });
 
-        function previousPeriod() {
-            // Implementation for previous period navigation
-            console.log('Previous period');
-        }
+            // Net worth chart aligned to the exact same labels
+            const yearsEl = document.getElementById("income-years");
+            const netSeriesEl = document.getElementById("net-worth-series");
+            const nwLabels = yearsEl ? JSON.parse(yearsEl.textContent).map(String) : [];
+            const nwValues = netSeriesEl ? JSON.parse(netSeriesEl.textContent).map(Number) : [];
 
-        function nextPeriod() {
-            // Implementation for next period navigation
-            console.log('Next period');
-        }
-    </script> -->
-    {% if active_result %}
-        {{ yearly|json_script:"yearly-data" }}
-    {% endif %}
-    <script>
-        {% if active_result %}
-        // Parse the year-by-year data (numbers come through as numbers)
-        const yearly = JSON.parse(document.getElementById("yearly-data").textContent);
-
-        const labels        = yearly.map(d => `Year ${d.year}`);
-        const netWorth      = yearly.map(d => Number(d.ending_balance));                // main line
-        const realNetWorth  = yearly.map(d => Number(d.inflation_adjusted_balance));    // optional second line
-
-        const ctx = document.getElementById('netWorthChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-            labels,
-            datasets: [
-                { label: 'Projected Net Worth', data: netWorth,  borderWidth: 2, fill: false, tension: 0.35 },
-                { label: 'Inflation-Adjusted',  data: realNetWorth, borderWidth: 2, fill: false, tension: 0.35 }
-            ]
-            },
-            options: {
-            responsive: true,
-            plugins: {
-                title: { display: true, text: 'Projected Net Worth Growth' },
-                legend: { display: true }
-            },
-            scales: {
-                x: { title: { display: true, text: 'Year' } },
-                y: {
-                beginAtZero: true,
-                ticks: { callback: v => '$' + Number(v).toLocaleString() },
-                title: { display: true, text: 'Net Worth ($)' }
-                }
+            if (document.getElementById('netWorthChart')) {
+                const ctx2 = document.getElementById('netWorthChart').getContext('2d');
+                new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: nwLabels,
+                        datasets: [{
+                            label: 'Projected Net Worth',
+                            data: nwValues,
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.35
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: { display: true, text: 'Projected Net Worth (aligned to your years)' },
+                            legend: { display: true },
+                            tooltip: {
+                                callbacks: {
+                                    label: (c)=>{
+                                        const v = Number(c.parsed.y || 0);
+                                        return 'Net Worth: $' + v.toLocaleString(undefined, {maximumFractionDigits: 2});
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Year' } },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { callback: (v)=>'$' + Number(v).toLocaleString() },
+                                title: { display: true, text: 'Net Worth ($)' }
+                            }
+                        }
+                    }
+                });
             }
-            }
-        });
-        {% else %}
-        // no active result yet
-        {% endif %}
-
-        // (Optional) keep your next/prev stubs if you want
-        function previousPeriod() {}
-        function nextPeriod() {}
+        })();
     </script>
-
-
-    {% endif %}
 </body>
 </html>
-

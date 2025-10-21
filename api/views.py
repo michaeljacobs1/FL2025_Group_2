@@ -18,7 +18,7 @@ from .models import (
     ProjectionScenario,
     ProjectionYearlyData,
 )
-from .projection_service import DataGenerator, ProjectionCalculator
+from .projection_service import ProjectionCalculator
 from .serializers import (
     FinancialProfileSerializer,
     IncomeEntrySerializer,
@@ -114,9 +114,7 @@ class FinancialDashboardView(LoginRequiredMixin, TemplateView):
         financial_profile, created = FinancialProfile.objects.get_or_create(user=user)
         context["financial_profile"] = financial_profile
 
-        # Get recent projections (handle case where new fields don't exist yet)
         try:
-            # Use only() to avoid accessing new fields that might not exist
             context["recent_projections"] = (
                 ProjectionResult.objects.filter(user=user)
                 .only(
@@ -138,13 +136,11 @@ class FinancialDashboardView(LoginRequiredMixin, TemplateView):
             print(f"Error loading projections: {e}")
             context["recent_projections"] = []
 
-        # Get available scenarios (handle case where table doesn't exist yet)
         try:
             context["scenarios"] = ProjectionScenario.objects.filter(user=user)
         except Exception:
             context["scenarios"] = []
 
-        # Get income entries for dashboard
         try:
             context["income_entries"] = IncomeEntry.objects.filter(user=user).order_by(
                 "-year"
@@ -193,11 +189,74 @@ class FinancialInformationView(LoginRequiredMixin, View):
         financial_profile, created = FinancialProfile.objects.get_or_create(
             user=request.user
         )
+        income_entries = IncomeEntry.objects.filter(user=request.user).order_by("year")
         return render(
-            request, self.template_name, {"financial_profile": financial_profile}
+            request,
+            self.template_name,
+            {"financial_profile": financial_profile, "income_entries": income_entries},
         )
 
     def post(self, request):
+        mode = request.POST.get("income_mode", "")
+
+        if mode == "by_year":
+            years = request.POST.getlist("year[]")
+            incomes = request.POST.getlist("income[]")
+            rates = request.POST.getlist("savings_rate_year[]")
+            keep_years = []
+
+            const_flag = request.POST.get("use_constant_rate", "")
+            const_rate_val = request.POST.get("constant_rate_value", "")
+
+            for i in range(len(years)):
+                y = years[i].strip() if i < len(years) else ""
+                inc = incomes[i].strip() if i < len(incomes) else ""
+                rate = rates[i].strip() if i < len(rates) else ""
+                if not y or not inc:
+                    continue
+                year_i = int(y)
+                keep_years.append(year_i)
+
+                final_rate = None
+                if const_flag and const_rate_val:
+                    final_rate = Decimal(const_rate_val)
+                elif rate:
+                    final_rate = Decimal(rate)
+
+                IncomeEntry.objects.update_or_create(
+                    user=request.user,
+                    year=year_i,
+                    defaults={
+                        "income_amount": Decimal(inc),
+                        "income_source": "Salary",
+                        "savings_rate": final_rate,
+                    },
+                )
+
+            if keep_years:
+                (
+                    IncomeEntry.objects.filter(user=request.user)
+                    .exclude(year__in=keep_years)
+                    .delete()
+                )
+
+            calculator = ProjectionCalculator(request.user)
+            if not ProjectionScenario.objects.filter(user=request.user).exists():
+                calculator.create_default_scenarios()
+            default_scenario = ProjectionScenario.objects.filter(
+                user=request.user
+            ).first()
+            if default_scenario:
+                try:
+                    calculator.calculate_projection(
+                        default_scenario.id,
+                        projected_years=len(keep_years) if keep_years else 1,
+                    )
+                except Exception:
+                    pass
+
+            return redirect("results")
+
         financial_profile, created = FinancialProfile.objects.get_or_create(
             user=request.user
         )
@@ -226,19 +285,19 @@ class FinancialInformationView(LoginRequiredMixin, View):
         financial_profile.retirement_goals = request.POST.get("retirement_goals", "")
         financial_profile.save()
 
-        messages.success(request, "Financial information updated successfully!")
-        # return redirect("financial_info")
-        # new
         calculator = ProjectionCalculator(request.user)
         if not ProjectionScenario.objects.filter(user=request.user).exists():
             calculator.create_default_scenarios()
-
         default_scenario = ProjectionScenario.objects.filter(user=request.user).first()
         if default_scenario:
             try:
-                calculator.calculate_projection(default_scenario.id, projected_years=10)
+                years_from_income = IncomeEntry.objects.filter(
+                    user=request.user
+                ).count()
+                calculator.calculate_projection(
+                    default_scenario.id, projected_years=years_from_income or 10
+                )
             except Exception:
-                # Don’t block UX if projection fails; you can log this if you want
                 pass
 
         return redirect("results")
@@ -271,60 +330,7 @@ class IncomeTimelineView(LoginRequiredMixin, View):
 
 
 class ResultsView(LoginRequiredMixin, View):
-    # template_name = "financial/results.html"
-
     def get(self, request):
-        #     user = request.user
-
-        #     try:
-        #         financial_profile = FinancialProfile.objects.get(user=user)
-        #     except FinancialProfile.DoesNotExist:
-        #         messages.warning(
-        #             request, "Please complete your financial information first."
-        #         )
-        #         return redirect("financial_info")
-
-        #     # Get projections and scenarios (handle case where new fields don't exist yet)
-        #     try:
-        #         # Use only() to avoid accessing new fields that might not exist
-        #         projections = (
-        #             ProjectionResult.objects.filter(user=user)
-        #             .only(
-        #                 "id",
-        #                 "total_invested",
-        #                 "projected_years",
-        #                 "projected_valuation",
-        #                 "income_ratio",
-        #                 "investment_ratio",
-        #                 "property_ratio",
-        #                 "real_estate_ratio",
-        #                 "liabilities_ratio",
-        #                 "net_worth",
-        #                 "created_at",
-        #             )
-        #             .order_by("-created_at")
-        #         )
-        #         scenarios = ProjectionScenario.objects.filter(user=user)
-
-        #         # If no scenarios exist, create default ones
-        #         if not scenarios.exists():
-        #             calculator = ProjectionCalculator(user)
-        #             calculator.create_default_scenarios()
-        #             scenarios = ProjectionScenario.objects.filter(user=user)
-        #     except Exception as e:
-        #         print(f"Error loading projections/scenarios: {e}")
-        #         projections = []
-        #         scenarios = []
-
-        #     return render(
-        #         request,
-        #         self.template_name,
-        #         {
-        #             "financial_profile": financial_profile,
-        #             "projections": projections,
-        #             "scenarios": scenarios,
-        #         },
-        #     )
         scenarios = ProjectionScenario.objects.filter(user=request.user).order_by("id")
 
         latest_by_scenario = []
@@ -363,49 +369,55 @@ class ResultsView(LoginRequiredMixin, View):
                 )
             )
 
+        income_entries_qs = IncomeEntry.objects.filter(user=request.user).order_by(
+            "year"
+        )
+        income_entries = list(income_entries_qs.values("year", "income_amount"))
+        income_years = [e["year"] for e in income_entries]
+
+        # Align yearly projection series to the number of income years (labels come from income_years)
+        net_worth_series = []
+        if yearly:
+            for idx in range(len(income_years)):
+                if idx < len(yearly):
+                    net_worth_series.append(float(yearly[idx]["ending_balance"]))
+                else:
+                    break
+
         context = {
             "projections": latest_by_scenario,
             "active_result": active,
             "yearly": yearly,
             "scenarios": scenarios,
+            "income_entries": income_entries,
+            "income_years": income_years,
+            "net_worth_series": net_worth_series,
         }
         return render(request, "financial/results.html", context)
 
     def post(self, request):
-        user = request.user
+        user = self.request.user
         scenario_id = request.POST.get("scenario_id")
-        action = request.POST.get("action", "calculate")
 
-        if action == "generate_sample_data":
-            try:
-                DataGenerator.generate_sample_financial_profile(user)
-                DataGenerator.generate_sample_income_entries(user)
-                DataGenerator.generate_sample_projections(user)
-                messages.success(request, "Sample data generated successfully!")
-            except Exception as e:
-                messages.error(request, f"Error generating sample data: {str(e)}")
+        if not scenario_id:
+            messages.error(request, "Please select a scenario.")
             return redirect("results")
 
-        if action == "calculate":
-            if not scenario_id:
-                messages.error(request, "Please select a scenario.")
-                return redirect("results")
+        years_from_income = IncomeEntry.objects.filter(user=user).count()
+        if years_from_income <= 0:
+            messages.error(
+                request, "Add income years on the Financial Info page first."
+            )
+            return redirect("financial_info")
 
-            try:
-                projected_years = int(request.POST.get("projected_years", 10))
-            except ValueError:
-                messages.error(request, "Invalid projected years.")
-                return redirect("results")
-
-            try:
-                calculator = ProjectionCalculator(user)
-                # Call without binding the result, since you don't use it
-                calculator.calculate_projection(int(scenario_id), projected_years)
-                messages.success(
-                    request, f"Projection calculated for {projected_years} years!"
-                )
-            except Exception as e:
-                messages.error(request, f"Error calculating projection: {str(e)}")
+        try:
+            calculator = ProjectionCalculator(user)
+            calculator.calculate_projection(
+                int(scenario_id), projected_years=years_from_income
+            )
+            messages.success(request, "Projection calculated from your entered years.")
+        except Exception as e:
+            messages.error(request, f"Error calculating projection: {str(e)}")
 
         return redirect("results")
 
@@ -448,22 +460,27 @@ class ScenarioComparisonView(LoginRequiredMixin, View):
     def post(self, request):
         user = request.user
         scenario_ids = request.POST.getlist("scenario_ids")
-        projected_years = int(request.POST.get("projected_years", 10))
 
         if len(scenario_ids) < 2:
             messages.error(request, "Please select at least 2 scenarios to compare.")
             return redirect("scenario_comparison")
 
+        years_from_income = IncomeEntry.objects.filter(user=user).count()
+        if years_from_income <= 0:
+            messages.error(
+                request, "Add income years on the Financial Info page first."
+            )
+            return redirect("financial_info")
+
         try:
             calculator = ProjectionCalculator(user)
             comparisons = calculator.compare_scenarios(
-                [int(sid) for sid in scenario_ids], projected_years
+                [int(sid) for sid in scenario_ids], years_from_income
             )
-
             return render(
                 request,
                 self.template_name,
-                {"comparisons": comparisons, "projected_years": projected_years},
+                {"comparisons": comparisons, "projected_years": years_from_income},
             )
         except Exception as e:
             messages.error(request, f"Error comparing scenarios: {str(e)}")
