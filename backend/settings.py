@@ -85,25 +85,25 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # --- USE SQLITE LOCALLY ---
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-# --- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
 # DATABASES = {
 #     "default": {
-#         "ENGINE": "django.db.backends.mysql",
-#         "NAME": "appdb",
-#         "USER": "appuser",
-#         "PASSWORD": "strong-password",
-#         "HOST": "127.0.0.1",
-#         "PORT": "3306",
-#         "OPTIONS": {"charset": "utf8mb4"},
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
 #     }
 # }
+
+#--- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "appdb",
+        "USER": "appuser",
+        "PASSWORD": "strong-password",
+        "HOST": "db",
+        "PORT": "3306",
+        "OPTIONS": {"charset": "utf8mb4"},
+    }
+}
 
 
 # Password validation

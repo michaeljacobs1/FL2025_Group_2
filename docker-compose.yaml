@@ -1,9 +1,22 @@
 services:
-    db: 
-        image: docker.io/mysql:latest
+    db:
+        image: mysql:latest
         container_name: investments
         environment:
-            - MYSQL_USER=user
-            - MYSQL_PASSWORD=password
+            MYSQL_ROOT_PASSWORD: mypassword
+            MYSQL_USER: myuser
+            MYSQL_PASSWORD: mypassword
+            MYSQL_DATABASE: mydatabase
 
-            
+    app:
+        build:
+            context: .
+            dockerfile: ./docker/Dockerfile
+        container_name: investments_app
+        command: python manage.py runserver
+        volumes:
+            - ./:/app
+        ports:
+            - "8000:8000"
+        depends_on:
+            - db
