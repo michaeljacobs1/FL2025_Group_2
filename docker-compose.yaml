@@ -1,22 +1,61 @@
 services:
+
     db:
+
         image: mysql:latest
+
         container_name: investments
+
+        restart: always
+
         environment:
+
             MYSQL_ROOT_PASSWORD: mypassword
+
             MYSQL_USER: myuser
+
             MYSQL_PASSWORD: mypassword
+
             MYSQL_DATABASE: mydatabase
 
+        ports: [ '3306:3306' ]
+
+        healthcheck:
+
+            test: mysqladmin ping -h 0.0.0.0 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+
+            interval: 5s
+
+            timeout: 5s
+
+            retries: 5
+
+            start_period: 10s
+
+ 
+
     app:
+
         build:
+
             context: .
+
             dockerfile: ./docker/Dockerfile
+
         container_name: investments_app
-        command: python manage.py runserver
+
+        command: python manage.py runserver 0.0.0.0:8000
+
         volumes:
+
             - ./:/app
+
         ports:
+
             - "8000:8000"
+
         depends_on:
-            - db
+
+            db:
+
+                condition: service_healthy
