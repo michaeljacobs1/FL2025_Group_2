@@ -92,7 +92,7 @@ WSGI_APPLICATION = "backend.wsgi.application"
 #     }
 # }
 
-#--- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
+# --- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
