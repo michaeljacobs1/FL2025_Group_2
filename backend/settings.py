@@ -99,7 +99,8 @@ DATABASES = {
         "NAME": "appdb",
         "USER": "appuser",
         "PASSWORD": "strong-password",
-        "HOST": "db",
+        #"HOST": "db",
+        "HOST": "127.0.0.1",
         "PORT": "3306",
         "OPTIONS": {"charset": "utf8mb4"},
     }
@@ -123,6 +124,16 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "financialplannerreset@gmail.com"
+EMAIL_HOST_PASSWORD = "sxgomxassbrjlrui"
+DEFAULT_FROM_EMAIL = "Financial Planner <financialplannerreset@gmail.com>"
 
 
 # Internationalization
