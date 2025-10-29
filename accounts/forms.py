@@ -7,7 +7,7 @@ class SignupForm(UserCreationForm):
     email = forms.EmailField(
         label="Email address",
         required=True,
-        widget=forms.EmailInput(attrs={"placeholder": "you@example.com"})
+        widget=forms.EmailInput(attrs={"placeholder": "you@example.com"}),
     )
 
     class Meta:
