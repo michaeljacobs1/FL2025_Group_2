@@ -100,7 +100,7 @@ DATABASES = {
         "USER": "myuser",
         "PASSWORD": "mypassword",
         "HOST": "db",
-        #"HOST": "127.0.0.1",
+        # "HOST": "127.0.0.1",
         "PORT": "3306",
         "OPTIONS": {"charset": "utf8mb4"},
     }
@@ -124,7 +124,6 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
 
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
