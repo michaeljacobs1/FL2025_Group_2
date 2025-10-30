@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Cost Estimation{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-robot me-2"></i>AI-Powered Cost Estimation
+                    </h3>
+                    <p class="text-muted mb-0">Get personalized cost estimates for your dream location and lifestyle</p>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.desired_location.id_for_label }}" class="form-label">
+                                    {{ form.desired_location.label }}
+                                </label>
+                                {{ form.desired_location }}
+                                {% if form.desired_location.help_text %}
+                                    <div class="form-text">{{ form.desired_location.help_text }}</div>
+                                {% endif %}
+                                {% if form.desired_location.errors %}
+                                    <div class="text-danger">{{ form.desired_location.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.house_type.id_for_label }}" class="form-label">
+                                    {{ form.house_type.label }}
+                                </label>
+                                {{ form.house_type }}
+                                {% if form.house_type.help_text %}
+                                    <div class="form-text">{{ form.house_type.help_text }}</div>
+                                {% endif %}
+                                {% if form.house_type.errors %}
+                                    <div class="text-danger">{{ form.house_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.house_size_sqft.id_for_label }}" class="form-label">
+                                    {{ form.house_size_sqft.label }}
+                                </label>
+                                {{ form.house_size_sqft }}
+                                {% if form.house_size_sqft.help_text %}
+                                    <div class="form-text">{{ form.house_size_sqft.help_text }}</div>
+                                {% endif %}
+                                {% if form.house_size_sqft.errors %}
+                                    <div class="text-danger">{{ form.house_size_sqft.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.number_of_children.id_for_label }}" class="form-label">
+                                    {{ form.number_of_children.label }}
+                                </label>
+                                {{ form.number_of_children }}
+                                {% if form.number_of_children.help_text %}
+                                    <div class="form-text">{{ form.number_of_children.help_text }}</div>
+                                {% endif %}
+                                {% if form.number_of_children.errors %}
+                                    <div class="text-danger">{{ form.number_of_children.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>How it works:</strong> Our AI analyzes current market data to provide accurate cost estimates for housing, childcare, education, and other expenses in your desired location.
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-magic me-2"></i>Generate AI Cost Estimate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Estimates</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_estimates %}
+                        {% for estimate in recent_estimates %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong>{{ estimate.desired_location }}</strong><br>
+                                    <small class="text-muted">
+                                        {{ estimate.number_of_children }} kids, {{ estimate.house_size_sqft }} sqft
+                                    </small>
+                                </div>
+                                <a href="{% url 'ai_cost_estimate_detail' estimate.id %}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No estimates yet. Create your first estimate above!</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">What's Included</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-home text-primary me-2"></i>Housing costs</li>
+                        <li><i class="fas fa-child text-primary me-2"></i>Childcare & education</li>
+                        <li><i class="fas fa-car text-primary me-2"></i>Transportation</li>
+                        <li><i class="fas fa-utensils text-primary me-2"></i>Food & groceries</li>
+                        <li><i class="fas fa-heartbeat text-primary me-2"></i>Healthcare</li>
+                        <li><i class="fas fa-tools text-primary me-2"></i>Maintenance & utilities</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

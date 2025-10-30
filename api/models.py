@@ -37,6 +37,16 @@ class IncomeEntry(models.Model):
     year = models.IntegerField()
     income_amount = models.DecimalField(max_digits=12, decimal_places=2)
     income_source = models.CharField(max_length=100, default="Salary")
+    costs = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Annual costs/expenses",
+    )
+    location = models.CharField(
+        max_length=200, blank=True, null=True, help_text="Location for this year"
+    )
     savings_rate = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True
     )
@@ -163,3 +173,206 @@ class ProjectionYearlyData(models.Model):
 
     def __str__(self):
         return f"{self.projection.user.username} - Year {self.year}: ${self.ending_balance}"
+
+
+class LocationPreference(models.Model):
+    """User's location preferences with year ranges"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    location = models.CharField(max_length=200, help_text="City, State, Country")
+    start_year = models.IntegerField(help_text="Starting year for this location")
+    end_year = models.IntegerField(help_text="Ending year for this location")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["start_year"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.location} ({self.start_year}-{self.end_year})"
+
+
+class SpendingPreference(models.Model):
+    """User's spending preferences for different categories"""
+
+    SPENDING_CHOICES = [
+        ("very_little", "Very Little"),
+        ("less_than_average", "Less Than Average"),
+        ("average", "Average"),
+        ("above_average", "Above Average"),
+        ("very_high", "Very High"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    housing_spending = models.CharField(
+        max_length=20, choices=SPENDING_CHOICES, default="average"
+    )
+    travel_spending = models.CharField(
+        max_length=20, choices=SPENDING_CHOICES, default="average"
+    )
+    food_spending = models.CharField(
+        max_length=20, choices=SPENDING_CHOICES, default="average"
+    )
+    leisure_spending = models.CharField(
+        max_length=20, choices=SPENDING_CHOICES, default="average"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - Spending Preferences"
+
+
+class AICostEstimate(models.Model):
+    """AI-generated cost estimates for housing and family planning"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # User preferences
+    desired_location = models.CharField(
+        max_length=200, help_text="City, State, Country"
+    )
+    number_of_children = models.IntegerField(help_text="Desired number of children")
+    house_size_sqft = models.IntegerField(help_text="Desired house size in square feet")
+    house_type = models.CharField(
+        max_length=50,
+        choices=[
+            ("single_family", "Single Family Home"),
+            ("condo", "Condo/Apartment"),
+            ("townhouse", "Townhouse"),
+            ("multi_family", "Multi-Family Home"),
+        ],
+        default="single_family",
+    )
+
+    # AI-generated cost estimates
+    estimated_home_price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_monthly_mortgage = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_property_tax_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_insurance_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_utilities_monthly = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_maintenance_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+
+    # Child-related costs
+    estimated_childcare_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_education_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_child_healthcare_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_child_food_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_child_clothing_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+
+    # Additional location-based costs
+    estimated_transportation_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_healthcare_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    estimated_groceries_annual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+
+    # AI response metadata
+    ai_response_raw = models.TextField(
+        blank=True, help_text="Raw AI response for debugging"
+    )
+    ai_model_used = models.CharField(max_length=100, default="gpt-4")
+    confidence_score = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="AI confidence score 0-1",
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.desired_location} ({self.number_of_children} kids, {self.house_size_sqft} sqft)"
+
+    @property
+    def total_housing_costs_annual(self):
+        """Calculate total annual housing costs"""
+        if not all(
+            [
+                self.estimated_monthly_mortgage,
+                self.estimated_property_tax_annual,
+                self.estimated_insurance_annual,
+                self.estimated_utilities_monthly,
+                self.estimated_maintenance_annual,
+            ]
+        ):
+            return None
+        return (
+            self.estimated_monthly_mortgage * 12
+            + self.estimated_property_tax_annual
+            + self.estimated_insurance_annual
+            + self.estimated_utilities_monthly * 12
+            + self.estimated_maintenance_annual
+        )
+
+    @property
+    def total_child_costs_annual(self):
+        """Calculate total annual child-related costs"""
+        if not all(
+            [
+                self.estimated_childcare_annual,
+                self.estimated_education_annual,
+                self.estimated_child_healthcare_annual,
+                self.estimated_child_food_annual,
+                self.estimated_child_clothing_annual,
+            ]
+        ):
+            return None
+        return (
+            self.estimated_childcare_annual
+            + self.estimated_education_annual
+            + self.estimated_child_healthcare_annual
+            + self.estimated_child_food_annual
+            + self.estimated_child_clothing_annual
+        ) * self.number_of_children
+
+    @property
+    def total_lifestyle_costs_annual(self):
+        """Calculate total annual lifestyle costs"""
+        if not all(
+            [
+                self.estimated_transportation_annual,
+                self.estimated_healthcare_annual,
+                self.estimated_groceries_annual,
+            ]
+        ):
+            return None
+        return (
+            self.estimated_transportation_annual
+            + self.estimated_healthcare_annual
+            + self.estimated_groceries_annual
+        )
