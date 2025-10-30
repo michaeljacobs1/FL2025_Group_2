@@ -68,8 +68,15 @@ class AICostEstimateSerializer(serializers.ModelSerializer):
     total_housing_costs_annual = serializers.ReadOnlyField()
     total_child_costs_annual = serializers.ReadOnlyField()
     total_lifestyle_costs_annual = serializers.ReadOnlyField()
-    
+
     class Meta:
         model = AICostEstimate
         fields = "__all__"
-        read_only_fields = ["user", "created_at", "updated_at", "ai_response_raw", "ai_model_used", "confidence_score"]
+        read_only_fields = [
+            "user",
+            "created_at",
+            "updated_at",
+            "ai_response_raw",
+            "ai_model_used",
+            "confidence_score",
+        ]
