@@ -26,6 +26,9 @@ services:
             - ./:/app
         ports:
             - "8000:8000"
+        environment:
+            - OPENAI_API_KEY=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
+            - OPENAI_MODEL=gpt-4.5
         depends_on:
             db:
                 condition: service_healthy

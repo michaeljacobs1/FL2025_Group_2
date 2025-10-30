@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    AICostEstimateViewSet,
     FinancialDashboardView,
     FinancialInformationView,
     FinancialProfileViewSet,
@@ -25,6 +26,7 @@ router.register("projection-scenarios", ProjectionScenarioViewSet)
 router.register("projection-results", ProjectionResultViewSet)
 router.register("income-entries", IncomeEntryViewSet)
 router.register("personal-information", PersonalInformationViewSet)
+router.register("ai-cost-estimates", AICostEstimateViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

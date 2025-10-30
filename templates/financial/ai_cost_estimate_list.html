@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Cost Estimates{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-robot me-2"></i>AI Cost Estimates
+                </h2>
+                <a href="{% url 'ai_cost_estimation' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create New Estimate
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% if estimates %}
+        <div class="row">
+            {% for estimate in estimates %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">{{ estimate.desired_location }}</h6>
+                            <span class="badge bg-{% if estimate.confidence_score >= 0.8 %}success{% elif estimate.confidence_score >= 0.6 %}warning{% else %}danger{% endif %}">
+                                {{ estimate.confidence_score|floatformat:0 }}%
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <small class="text-muted">House Type:</small><br>
+                                <strong>{{ estimate.get_house_type_display }}</strong>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Size:</small><br>
+                                <strong>{{ estimate.house_size_sqft }} sq ft</strong>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Children:</small><br>
+                                <strong>{{ estimate.number_of_children }}</strong>
+                            </div>
+                            
+                            {% if estimate.total_housing_costs_annual %}
+                                <hr>
+                                <div class="text-center">
+                                    <h5 class="text-primary mb-1">${{ estimate.total_housing_costs_annual|floatformat:0 }}</h5>
+                                    <small class="text-muted">Annual Housing Costs</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">{{ estimate.created_at|date:"M d, Y" }}</small>
+                                <a href="{% url 'ai_cost_estimate_detail' estimate.id %}" class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card text-center py-5">
+                    <div class="card-body">
+                        <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Cost Estimates Yet</h4>
+                        <p class="text-muted mb-4">Create your first AI-powered cost estimate to get started with personalized financial planning.</p>
+                        <a href="{% url 'ai_cost_estimation' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>Create Your First Estimate
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

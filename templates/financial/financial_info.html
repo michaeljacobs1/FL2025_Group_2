@@ -40,11 +40,12 @@
             {% endif %}
 
             <div class="financial-sections">
+                <!-- Income and Cost Generation Section -->
                 <div class="card form-card">
                     <div class="card-header">
-                        <h3>Income Timeline (By Year)</h3>
+                        <h3>Income & Cost Planning</h3>
                         <div class="form-toolbar">
-                            <span class="pill">Manual or Growth-based</span>
+                            <span class="pill">AI-Powered Cost Estimation</span>
                         </div>
                     </div>
 
@@ -138,6 +139,65 @@
 
                         <div class="info-box">
                             <p><strong>Tips:</strong> “Generate” builds N rows from Start Year. If Base Income and <em>Income growth %</em> are provided, incomes compound from Base Income. To auto-fill savings rates, set a base rate and either keep it constant or provide a <em>Savings rate growth %</em>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Cost Estimation Section -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>AI-Powered Cost Estimation</h3>
+                        <div class="form-toolbar">
+                            <span class="pill">Location & Lifestyle</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <form method="post" id="aiCostForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="ai_cost_mode" value="1">
+                            
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="desired_location">Desired Location</label>
+                                    <input class="input" id="desired_location" name="desired_location" type="text" 
+                                           placeholder="e.g., Austin, Texas, USA" required>
+                                    <small class="form-help">Enter city, state, and country where you want to live</small>
+                                </div>
+                                <div class="field">
+                                    <label for="house_type">House Type</label>
+                                    <select class="input" id="house_type" name="house_type" required>
+                                        <option value="">Select house type</option>
+                                        <option value="single_family">Single Family Home</option>
+                                        <option value="condo">Condo/Apartment</option>
+                                        <option value="townhouse">Townhouse</option>
+                                        <option value="multi_family">Multi-Family Home</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="house_size_sqft">House Size (sq ft)</label>
+                                    <input class="input" id="house_size_sqft" name="house_size_sqft" type="number" 
+                                           min="500" max="10000" placeholder="e.g., 2000" required>
+                                </div>
+                                <div class="field">
+                                    <label for="number_of_children">Number of Children</label>
+                                    <input class="input" id="number_of_children" name="number_of_children" type="number" 
+                                           min="0" max="10" placeholder="e.g., 2" required>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-robot"></i> Generate AI Cost Estimate
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="info-box">
+                            <p><strong>AI Cost Estimation:</strong> Our AI analyzes current market data to provide accurate cost estimates for housing, childcare, education, and other expenses in your desired location. This data will be integrated into your financial projections.</p>
+                            <p><strong>Note:</strong> If you encounter quota or billing errors, please ensure your OpenAI account has billing set up and sufficient credits available.</p>
                         </div>
                     </div>
                 </div>

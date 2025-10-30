@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
@@ -10,6 +11,7 @@ from django.views.generic import CreateView, TemplateView
 from rest_framework import permissions, viewsets
 
 from .models import (
+    AICostEstimate,
     FinancialProfile,
     IncomeEntry,
     PersonalInformation,
@@ -20,6 +22,7 @@ from .models import (
 )
 from .projection_service import ProjectionCalculator
 from .serializers import (
+    AICostEstimateSerializer,
     FinancialProfileSerializer,
     IncomeEntrySerializer,
     PersonalInformationSerializer,
@@ -183,7 +186,7 @@ class PersonalInformationView(LoginRequiredMixin, View):
 
 
 class FinancialInformationView(LoginRequiredMixin, View):
-    template_name = "financial/financial_info.html"
+    template_name = "financial/financial_info_new.html"
 
     def get(self, request):
         financial_profile, created = FinancialProfile.objects.get_or_create(
@@ -197,6 +200,18 @@ class FinancialInformationView(LoginRequiredMixin, View):
         )
 
     def post(self, request):
+        # Check if this is a generate results request
+        if request.POST.get("generate_results") == "1":
+            return self._handle_generate_results(request)
+        
+        # Check if this is a save projection request
+        if request.POST.get("save_projection") == "1":
+            return self._handle_save_projection(request)
+        
+        # Check if this is an AI cost generation request
+        if request.POST.get("generate_ai_costs") == "1":
+            return self._handle_ai_cost_generation(request)
+        
         mode = request.POST.get("income_mode", "")
 
         if mode == "by_year":
@@ -301,6 +316,316 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 pass
 
         return redirect("results")
+    
+    def _handle_ai_cost_generation(self, request):
+        """Handle AI cost generation for income timeline"""
+        from .ai_cost_service import AICostEstimationService
+        from .models import LocationPreference, SpendingPreference
+        
+        # Check if OpenAI API key is configured
+        import os
+        if not os.getenv('OPENAI_API_KEY'):
+            return JsonResponse({"success": False, "error": "AI cost generation is not configured."})
+        
+        try:
+            # Get form data
+            years = request.POST.getlist('year[]')
+            incomes = request.POST.getlist('income[]')
+            locations = request.POST.getlist('locations[]')
+            start_years = request.POST.getlist('start_years[]')
+            end_years = request.POST.getlist('end_years[]')
+            
+            housing_spending = request.POST.get('housing_spending', 'average')
+            travel_spending = request.POST.get('travel_spending', 'average')
+            food_spending = request.POST.get('food_spending', 'average')
+            leisure_spending = request.POST.get('leisure_spending', 'average')
+            
+            # Validate required data
+            if not years or not incomes or not locations:
+                return JsonResponse({"success": False, "error": "Please fill in all required fields."})
+            
+            # Save location preferences
+            LocationPreference.objects.filter(user=request.user).delete()
+            for i, location in enumerate(locations):
+                if location.strip():
+                    LocationPreference.objects.create(
+                        user=request.user,
+                        location=location.strip(),
+                        start_year=int(start_years[i]) if i < len(start_years) else int(years[0]),
+                        end_year=int(end_years[i]) if i < len(end_years) else int(years[-1])
+                    )
+            
+            # Save spending preferences
+            SpendingPreference.objects.filter(user=request.user).delete()
+            SpendingPreference.objects.create(
+                user=request.user,
+                housing_spending=housing_spending,
+                travel_spending=travel_spending,
+                food_spending=food_spending,
+                leisure_spending=leisure_spending
+            )
+            
+            # Generate costs for each year
+            ai_service = AICostEstimationService()
+            generated_costs = []
+            
+            for i, (year, income) in enumerate(zip(years, incomes)):
+                if not income or float(income) <= 0:
+                    generated_costs.append(0)
+                    continue
+                
+                # Find location for this year
+                location_pref = LocationPreference.objects.filter(
+                    user=request.user,
+                    start_year__lte=int(year),
+                    end_year__gte=int(year)
+                ).first()
+                
+                if not location_pref:
+                    generated_costs.append(0)
+                    continue
+                
+                # Generate cost estimate
+                result = ai_service.generate_contextual_cost_estimate(
+                    location=location_pref.location,
+                    income=float(income),
+                    housing_spending=housing_spending,
+                    travel_spending=travel_spending,
+                    food_spending=food_spending,
+                    leisure_spending=leisure_spending
+                )
+                
+                if result['success']:
+                    # Ensure costs don't exceed income
+                    total_cost = result['total_annual_cost']
+                    max_cost = float(income) * 0.95  # Max 95% of income
+                    final_cost = min(total_cost, max_cost)
+                    generated_costs.append(final_cost)
+                else:
+                    generated_costs.append(0)
+            
+            return JsonResponse({
+                "success": True,
+                "costs": generated_costs,
+                "message": f"Generated costs for {len(generated_costs)} years"
+            })
+            
+        except Exception as e:
+            return JsonResponse({"success": False, "error": f"An error occurred: {str(e)}"})
+    
+    def _handle_generate_results(self, request):
+        """Handle generating results and saving to database"""
+        try:
+            import json
+            from .ai_cost_service import AICostEstimationService
+            from .models import LocationPreference, SpendingPreference
+            
+            # Get the data
+            income_data = json.loads(request.POST.get('income_data', '[]'))
+            location_data = json.loads(request.POST.get('location_data', '[]'))
+            spending_data = json.loads(request.POST.get('spending_data', '{}'))
+            
+            if not income_data:
+                return JsonResponse({"success": False, "error": "No income data provided"})
+            
+            # Save location preferences
+            LocationPreference.objects.filter(user=request.user).delete()
+            for loc in location_data:
+                LocationPreference.objects.create(
+                    user=request.user,
+                    location=loc['location'],
+                    start_year=loc['startYear'],
+                    end_year=loc['endYear']
+                )
+            
+            # Save spending preferences
+            SpendingPreference.objects.filter(user=request.user).delete()
+            SpendingPreference.objects.create(
+                user=request.user,
+                housing_spending=spending_data.get('housing', 'average'),
+                travel_spending=spending_data.get('travel', 'average'),
+                food_spending=spending_data.get('food', 'average'),
+                leisure_spending=spending_data.get('leisure', 'average')
+            )
+            
+            # Generate AI costs for each year
+            ai_service = AICostEstimationService()
+            updated_income_data = []
+            previous_cost = None
+            current_location = None
+            
+            for year_data in income_data:
+                # Find location for this year
+                location_pref = LocationPreference.objects.filter(
+                    user=request.user,
+                    start_year__lte=year_data['year'],
+                    end_year__gte=year_data['year']
+                ).first()
+                
+                if location_pref:
+                    # Check if location changed
+                    if current_location != location_pref.location:
+                        # Location changed, reset previous cost
+                        previous_cost = None
+                        current_location = location_pref.location
+                    
+                    # Generate AI cost estimate with previous cost for stability
+                    result = ai_service.generate_contextual_cost_estimate(
+                        location=location_pref.location,
+                        income=year_data['income'],
+                        housing_spending=spending_data.get('housing', 'average'),
+                        travel_spending=spending_data.get('travel', 'average'),
+                        food_spending=spending_data.get('food', 'average'),
+                        leisure_spending=spending_data.get('leisure', 'average'),
+                        previous_cost=previous_cost,
+                        year=year_data['year']
+                    )
+                    
+                    if result['success']:
+                        total_cost = result['total_annual_cost']
+                        max_cost = year_data['income'] * 0.95  # Max 95% of income
+                        final_cost = min(total_cost, max_cost)
+                        previous_cost = final_cost  # Store for next year
+                    else:
+                        # Fallback calculation
+                        final_cost = year_data['income'] * 0.6  # 60% of income as fallback
+                        previous_cost = final_cost
+                else:
+                    # No location found, use fallback
+                    final_cost = year_data['income'] * 0.6
+                    previous_cost = final_cost
+                
+                updated_income_data.append({
+                    'year': year_data['year'],
+                    'income': year_data['income'],
+                    'costs': final_cost,
+                    'location': location_pref.location if location_pref else 'Unknown'
+                })
+            
+            # Save to database
+            IncomeEntry.objects.filter(user=request.user).delete()
+            for year_data in updated_income_data:
+                IncomeEntry.objects.create(
+                    user=request.user,
+                    year=year_data['year'],
+                    income_amount=year_data['income'],
+                    costs=year_data['costs'],
+                    location=year_data['location'],
+                    savings_rate=0  # Will be calculated later
+                )
+            
+            return JsonResponse({
+                "success": True,
+                "message": "Results generated and saved successfully"
+            })
+            
+        except Exception as e:
+            return JsonResponse({"success": False, "error": f"Error generating results: {str(e)}"})
+    
+    def _handle_save_projection(self, request):
+        """Handle saving the complete financial projection"""
+        try:
+            import json
+            
+            # Get the projection data
+            years = json.loads(request.POST.get('years', '[]'))
+            incomes = json.loads(request.POST.get('incomes', '[]'))
+            costs = json.loads(request.POST.get('costs', '[]'))
+            
+            if not years or not incomes or not costs:
+                return JsonResponse({"success": False, "error": "No projection data provided"})
+            
+            # Clear existing income entries for this user
+            IncomeEntry.objects.filter(user=request.user).delete()
+            
+            # Create new income entries
+            for i, (year, income, cost) in enumerate(zip(years, incomes, costs)):
+                IncomeEntry.objects.create(
+                    user=request.user,
+                    year=int(year),
+                    income_amount=float(income) if income else 0,
+                    costs=float(cost) if cost else 0,
+                    savings_rate=0  # Will be calculated later
+                )
+            
+            return JsonResponse({
+                "success": True,
+                "message": f"Projection saved with {len(years)} years of data"
+            })
+            
+        except Exception as e:
+            return JsonResponse({"success": False, "error": f"Error saving projection: {str(e)}"})
+    
+    def _handle_ai_cost_estimation(self, request):
+        """Handle AI cost estimation form submission"""
+        from .ai_cost_service import AICostEstimationService
+        
+        # Check if OpenAI API key is configured
+        import os
+        if not os.getenv('OPENAI_API_KEY'):
+            messages.error(request, "AI cost estimation is not configured. Please contact support.")
+            return redirect("financial_info")
+        
+        # Get form data
+        desired_location = request.POST.get('desired_location', '').strip()
+        house_type = request.POST.get('house_type', '')
+        house_size_sqft = request.POST.get('house_size_sqft', '')
+        number_of_children = request.POST.get('number_of_children', '')
+        
+        # Validate required fields
+        if not all([desired_location, house_type, house_size_sqft, number_of_children]):
+            messages.error(request, "Please fill in all required fields for AI cost estimation.")
+            return redirect("financial_info")
+        
+        try:
+            # Convert to appropriate types
+            house_size_sqft = int(house_size_sqft)
+            number_of_children = int(number_of_children)
+            
+            # Generate AI cost estimate
+            ai_service = AICostEstimationService()
+            result = ai_service.generate_cost_estimate(
+                location=desired_location,
+                number_of_children=number_of_children,
+                house_size_sqft=house_size_sqft,
+                house_type=house_type
+            )
+            
+            if result['success']:
+                # Create and save the cost estimate
+                cost_estimate = AICostEstimate.objects.create(
+                    user=request.user,
+                    desired_location=desired_location,
+                    number_of_children=number_of_children,
+                    house_size_sqft=house_size_sqft,
+                    house_type=house_type,
+                    ai_response_raw=result['ai_response_raw'],
+                    ai_model_used=result['model_used'],
+                    confidence_score=result['confidence_score']
+                )
+                
+                # Populate AI-generated data
+                cost_data = result['cost_data']
+                for field, value in cost_data.items():
+                    if hasattr(cost_estimate, field) and value is not None:
+                        setattr(cost_estimate, field, value)
+                cost_estimate.save()
+                
+                messages.success(request, f"AI cost estimate generated successfully! Confidence: {result['confidence_score']:.1%}")
+                return redirect("results")
+            else:
+                error_msg = result.get('error', 'Unknown error')
+                # Show the actual API error for debugging
+                messages.error(request, f"API Error: {error_msg}")
+                if 'quota' in error_msg.lower() or 'billing' in error_msg.lower():
+                    messages.error(request, "This appears to be a quota/billing issue. Please check your OpenAI billing settings.")
+                
+        except ValueError as e:
+            messages.error(request, f"Invalid input: {str(e)}")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {str(e)}")
+        
+        return redirect("financial_info")
 
 
 class IncomeTimelineView(LoginRequiredMixin, View):
@@ -372,7 +697,18 @@ class ResultsView(LoginRequiredMixin, View):
         income_entries_qs = IncomeEntry.objects.filter(user=request.user).order_by(
             "year"
         )
-        income_entries = list(income_entries_qs.values("year", "income_amount"))
+        income_entries = []
+        for entry in income_entries_qs:
+            net_savings = float(entry.income_amount) - float(entry.costs) if entry.costs else float(entry.income_amount)
+            savings_rate = (net_savings / float(entry.income_amount) * 100) if entry.income_amount > 0 else 0
+            income_entries.append({
+                'year': entry.year,
+                'income': entry.income_amount,
+                'costs': entry.costs,
+                'location': entry.location or 'Unknown',
+                'net_savings': net_savings,
+                'savings_rate': savings_rate
+            })
         income_years = [e["year"] for e in income_entries]
 
         # Align yearly projection series to the number of income years (labels come from income_years)
@@ -384,6 +720,9 @@ class ResultsView(LoginRequiredMixin, View):
                 else:
                     break
 
+        # Get AI cost estimates for the user
+        ai_cost_estimates = AICostEstimate.objects.filter(user=request.user).order_by('-created_at')[:3]
+        
         context = {
             "projections": latest_by_scenario,
             "active_result": active,
@@ -392,6 +731,7 @@ class ResultsView(LoginRequiredMixin, View):
             "income_entries": income_entries,
             "income_years": income_years,
             "net_worth_series": net_worth_series,
+            "ai_cost_estimates": ai_cost_estimates,
         }
         return render(request, "financial/results.html", context)
 
@@ -485,3 +825,17 @@ class ScenarioComparisonView(LoginRequiredMixin, View):
         except Exception as e:
             messages.error(request, f"Error comparing scenarios: {str(e)}")
             return redirect("scenario_comparison")
+
+
+class AICostEstimateViewSet(viewsets.ModelViewSet):
+    queryset = AICostEstimate.objects.all()
+    serializer_class = AICostEstimateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return AICostEstimate.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+

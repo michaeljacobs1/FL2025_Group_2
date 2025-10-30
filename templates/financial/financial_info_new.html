@@ -1,0 +1,482 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Information - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link active">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Financial Planning</h2>
+                <p>Plan your financial future with AI-powered cost estimation based on your income, locations, and spending preferences.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="financial-sections">
+                <!-- Step 1: Income Projection -->
+                <div class="card form-card step-card">
+                    <div class="card-header">
+                        <div class="step-indicator">
+                            <span class="step-number">Step 1</span>
+                            <h3>Income Projection</h3>
+                        </div>
+                        <div class="form-toolbar">
+                            <span class="pill">Basic Setup</span>
+                        </div>
+                    </div>
+
+                    <div class="card-content">
+                        <form method="post" id="incomeForm" class="pretty-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="income_mode" value="by_year">
+                            
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="startYear">Start Year</label>
+                                    <input class="input" id="startYear" type="number" min="1900" max="2200" required>
+                                </div>
+                                <div class="field">
+                                    <label for="yearsCount">Total Years to Project</label>
+                                    <input class="input" id="yearsCount" type="number" min="1" max="100" required>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="baseIncome">Starting Income ($)</label>
+                                    <input class="input" id="baseIncome" type="number" step="0.01" placeholder="e.g. 100000" required>
+                                </div>
+                                <div class="field">
+                                    <label for="growthPct">Annual Income Growth (%)</label>
+                                    <input class="input" id="growthPct" type="number" step="0.01" placeholder="e.g. 5" required>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Step 2: Location & Spending Preferences -->
+                <div class="card form-card step-card">
+                    <div class="card-header">
+                        <div class="step-indicator">
+                            <span class="step-number">Step 2</span>
+                            <h3>Location & Spending Preferences</h3>
+                        </div>
+                        <div class="form-toolbar">
+                            <span class="pill">Lifestyle Planning</span>
+                        </div>
+                    </div>
+
+                    <div class="card-content">
+                        <form method="post" id="locationSpendingForm" class="pretty-form">
+                            {% csrf_token %}
+                            
+                            <!-- Location Section -->
+                            <div class="section-header">
+                                <h4>Where Will You Live?</h4>
+                                <p class="section-description">Add locations and specify how many years you'll live in each place</p>
+                            </div>
+
+                            <div id="locationContainer">
+                                <div class="location-row">
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label>City/Town, State</label>
+                                            <input class="input" type="text" name="locations[]" placeholder="e.g., Chicago, Illinois" required>
+                                        </div>
+                                        <div class="field">
+                                            <label>Years Living Here</label>
+                                            <input class="input location-years" type="number" name="location_years[]" min="1" max="100" placeholder="e.g., 5" required>
+                                        </div>
+                                        <div class="field">
+                                            <button type="button" class="btn-secondary remove-location">Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="location-controls">
+                                <button type="button" id="addLocation" class="btn-secondary">
+                                    <i class="fas fa-plus"></i> Add Another Location
+                                </button>
+                                <div class="year-validation" id="yearValidation">
+                                    <span class="validation-text">Total years: <span id="totalYears">0</span> / <span id="requiredYears">0</span></span>
+                                    <span class="validation-status" id="validationStatus"></span>
+                                </div>
+                            </div>
+
+                            <!-- Spending Preferences Section -->
+                            <div class="section-header">
+                                <h4>Spending Preferences</h4>
+                                <p class="section-description">Rate your spending habits for each category</p>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="housing_spending">Housing Spending</label>
+                                    <select class="input" id="housing_spending" name="housing_spending" required>
+                                        <option value="very_little">Very Little</option>
+                                        <option value="less_than_average">Less Than Average</option>
+                                        <option value="average" selected>Average</option>
+                                        <option value="above_average">Above Average</option>
+                                        <option value="very_high">Very High</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="travel_spending">Travel Spending</label>
+                                    <select class="input" id="travel_spending" name="travel_spending" required>
+                                        <option value="very_little">Very Little</option>
+                                        <option value="less_than_average">Less Than Average</option>
+                                        <option value="average" selected>Average</option>
+                                        <option value="above_average">Above Average</option>
+                                        <option value="very_high">Very High</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="food_spending">Food & Groceries</label>
+                                    <select class="input" id="food_spending" name="food_spending" required>
+                                        <option value="very_little">Very Little</option>
+                                        <option value="less_than_average">Less Than Average</option>
+                                        <option value="average" selected>Average</option>
+                                        <option value="above_average">Above Average</option>
+                                        <option value="very_high">Very High</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="leisure_spending">Leisure Spending</label>
+                                    <select class="input" id="leisure_spending" name="leisure_spending" required>
+                                        <option value="very_little">Very Little</option>
+                                        <option value="less_than_average">Less Than Average</option>
+                                        <option value="average" selected>Average</option>
+                                        <option value="above_average">Above Average</option>
+                                        <option value="very_high">Very High</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" id="generateResults" class="btn-primary">
+                                    <i class="fas fa-robot"></i> Generate Results
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    // Global variables
+    let incomeData = [];
+    let locationData = [];
+    let totalProjectionYears = 0;
+    let startYear = 2025;
+
+    // DOM elements
+    const startYearEl = document.getElementById('startYear');
+    const yearsCountEl = document.getElementById('yearsCount');
+    const baseIncomeEl = document.getElementById('baseIncome');
+    const growthEl = document.getElementById('growthPct');
+    const locationContainer = document.getElementById('locationContainer');
+    const addLocationBtn = document.getElementById('addLocation');
+    const generateCostsBtn = document.getElementById('generateCosts');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+
+    // Load saved form data
+    function loadSavedData() {
+        const savedData = localStorage.getItem('financialFormData');
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                // Only load data if it's not empty/default values
+                if (data.startYear && data.startYear !== '') startYearEl.value = data.startYear;
+                if (data.yearsCount && data.yearsCount !== '') yearsCountEl.value = data.yearsCount;
+                if (data.baseIncome && data.baseIncome !== '') baseIncomeEl.value = data.baseIncome;
+                if (data.growthPct && data.growthPct !== '') growthEl.value = data.growthPct;
+                if (data.housingSpending) document.getElementById('housing_spending').value = data.housingSpending;
+                if (data.travelSpending) document.getElementById('travel_spending').value = data.travelSpending;
+                if (data.foodSpending) document.getElementById('food_spending').value = data.foodSpending;
+                if (data.leisureSpending) document.getElementById('leisure_spending').value = data.leisureSpending;
+                
+                // Load locations
+                if (data.locations && data.locations.length > 0) {
+                    locationContainer.innerHTML = '';
+                    data.locations.forEach((loc, index) => {
+                        addLocationRow();
+                        const locationInputs = document.querySelectorAll('input[name="locations[]"]');
+                        const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
+                        if (locationInputs[index]) locationInputs[index].value = loc.location;
+                        if (yearInputs[index]) yearInputs[index].value = loc.years;
+                    });
+                }
+                
+                updateYearValidation();
+            } catch (e) {
+                // If there's an error parsing saved data, clear it
+                localStorage.removeItem('financialFormData');
+            }
+        }
+    }
+
+    // Save form data
+    function saveFormData() {
+        const locationInputs = document.querySelectorAll('input[name="locations[]"]');
+        const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
+        const locations = [];
+        
+        for (let i = 0; i < locationInputs.length; i++) {
+            if (locationInputs[i].value.trim()) {
+                locations.push({
+                    location: locationInputs[i].value.trim(),
+                    years: parseInt(yearInputs[i].value) || 0
+                });
+            }
+        }
+        
+        const formData = {
+            startYear: startYearEl.value,
+            yearsCount: yearsCountEl.value,
+            baseIncome: baseIncomeEl.value,
+            growthPct: growthEl.value,
+            housingSpending: document.getElementById('housing_spending').value,
+            travelSpending: document.getElementById('travel_spending').value,
+            foodSpending: document.getElementById('food_spending').value,
+            leisureSpending: document.getElementById('leisure_spending').value,
+            locations: locations
+        };
+        
+        localStorage.setItem('financialFormData', JSON.stringify(formData));
+    }
+
+    // Step 2: Location Management
+    function addLocationRow() {
+        const row = document.createElement('div');
+        row.className = 'location-row';
+        row.innerHTML = `
+            <div class="form-grid">
+                <div class="field">
+                    <label>City/Town, State</label>
+                    <input class="input" type="text" name="locations[]" placeholder="e.g., Chicago, Illinois" required>
+                </div>
+                <div class="field">
+                    <label>Years Living Here</label>
+                    <input class="input location-years" type="number" name="location_years[]" min="1" max="100" placeholder="e.g., 5" required>
+                </div>
+                <div class="field">
+                    <button type="button" class="btn-secondary remove-location">Remove</button>
+                </div>
+            </div>
+        `;
+        locationContainer.appendChild(row);
+        updateYearValidation();
+    }
+
+    function updateYearValidation() {
+        const locationYears = document.querySelectorAll('.location-years');
+        let totalYears = 0;
+        
+        locationYears.forEach(input => {
+            const years = parseInt(input.value) || 0;
+            totalYears += years;
+        });
+
+        // Get current total projection years from the input field
+        const currentTotalProjectionYears = parseInt(yearsCountEl.value) || 0;
+        
+        document.getElementById('totalYears').textContent = totalYears;
+        document.getElementById('requiredYears').textContent = currentTotalProjectionYears;
+        
+        const validationStatus = document.getElementById('validationStatus');
+        if (totalYears === currentTotalProjectionYears) {
+            validationStatus.textContent = '✓ Valid';
+            validationStatus.className = 'validation-status valid';
+            generateCostsBtn.disabled = false;
+        } else if (totalYears > currentTotalProjectionYears) {
+            validationStatus.textContent = 'Too many years';
+            validationStatus.className = 'validation-status invalid';
+            generateCostsBtn.disabled = true;
+        } else {
+            validationStatus.textContent = 'Incomplete';
+            validationStatus.className = 'validation-status warning';
+            generateCostsBtn.disabled = true;
+        }
+    }
+
+    // Event listeners
+    addLocationBtn.addEventListener('click', addLocationRow);
+    
+    // Remove location rows
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-location')) {
+            e.target.closest('.location-row').remove();
+            updateYearValidation();
+        }
+    });
+
+    // Update validation when years change
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('location-years')) {
+            updateYearValidation();
+        }
+        // Also update when total years changes
+        if (e.target.id === 'yearsCount') {
+            updateYearValidation();
+        }
+    });
+
+    // Generate Results and redirect to results page
+    document.getElementById('generateResults').addEventListener('click', function() {
+        // Validate form
+        const startYear = parseInt(startYearEl.value);
+        const totalYears = parseInt(yearsCountEl.value);
+        const baseIncome = parseFloat(baseIncomeEl.value);
+        const growthRate = parseFloat(growthEl.value);
+
+        if (!startYear || !totalYears || !baseIncome || isNaN(growthRate)) {
+            alert('Please fill in all income fields.');
+            return;
+        }
+
+        // Validate locations
+        const locationInputs = document.querySelectorAll('input[name="locations[]"]');
+        const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
+        let totalLocationYears = 0;
+        
+        for (let i = 0; i < yearInputs.length; i++) {
+            const years = parseInt(yearInputs[i].value) || 0;
+            totalLocationYears += years;
+        }
+
+        if (totalLocationYears !== totalYears) {
+            alert(`Location years (${totalLocationYears}) must equal total projection years (${totalYears}).`);
+            return;
+        }
+
+        // Save form data
+        saveFormData();
+
+        // Generate income data
+        incomeData = [];
+        for (let i = 0; i < totalYears; i++) {
+            const year = startYear + i;
+            const income = baseIncome * Math.pow(1 + (growthRate / 100), i);
+            incomeData.push({
+                year: year,
+                income: income,
+                costs: 0
+            });
+        }
+
+        // Collect location data
+        locationData = [];
+        let currentYear = startYear;
+        
+        for (let i = 0; i < locationInputs.length; i++) {
+            const location = locationInputs[i].value.trim();
+            const years = parseInt(yearInputs[i].value);
+            
+            if (location && years) {
+                locationData.push({
+                    location: location,
+                    startYear: currentYear,
+                    endYear: currentYear + years - 1,
+                    years: years
+                });
+                currentYear += years;
+            }
+        }
+
+        // Get spending preferences
+        const spendingData = {
+            housing: document.getElementById('housing_spending').value,
+            travel: document.getElementById('travel_spending').value,
+            food: document.getElementById('food_spending').value,
+            leisure: document.getElementById('leisure_spending').value
+        };
+
+        // Send data to server and redirect to results
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('generate_results', '1');
+        formData.append('income_data', JSON.stringify(incomeData));
+        formData.append('location_data', JSON.stringify(locationData));
+        formData.append('spending_data', JSON.stringify(spendingData));
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect to results page
+                window.location.href = '/financial/results/';
+            } else {
+                alert('Error generating results: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating results. Please try again.');
+        });
+    });
+
+    // Clear form data for new users
+    function clearFormData() {
+        startYearEl.value = '';
+        yearsCountEl.value = '';
+        baseIncomeEl.value = '';
+        growthEl.value = '';
+        document.getElementById('housing_spending').value = 'average';
+        document.getElementById('travel_spending').value = 'average';
+        document.getElementById('food_spending').value = 'average';
+        document.getElementById('leisure_spending').value = 'average';
+        locationContainer.innerHTML = '';
+        addLocationRow();
+        updateYearValidation();
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if this is a new user (no saved data)
+        const savedData = localStorage.getItem('financialFormData');
+        if (!savedData) {
+            clearFormData();
+        } else {
+            loadSavedData();
+            addLocationRow();
+            updateYearValidation();
+        }
+    });
+    </script>
+</body>
+</html>
