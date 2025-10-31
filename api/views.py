@@ -14,11 +14,13 @@ from .models import (
     AICostEstimate,
     FinancialProfile,
     IncomeEntry,
+    LocationPreference,
     PersonalInformation,
     Post,
     ProjectionResult,
     ProjectionScenario,
     ProjectionYearlyData,
+    SpendingPreference,
 )
 from .projection_service import ProjectionCalculator
 from .serializers import (
@@ -193,16 +195,100 @@ class FinancialInformationView(LoginRequiredMixin, View):
             user=request.user
         )
         income_entries = IncomeEntry.objects.filter(user=request.user).order_by("year")
+
+        # Load existing location and spending preferences if they exist
+        location_preferences = LocationPreference.objects.filter(
+            user=request.user
+        ).order_by("start_year")
+
+        spending_preference = SpendingPreference.objects.filter(
+            user=request.user
+        ).first()
+
+        # Determine if user has any saved data
+        has_saved_data = income_entries.exists() or location_preferences.exists()
+
+        # Extract income parameters from existing entries if they exist
+        income_data = None
+        if income_entries.exists():
+            entries_list = list(income_entries)
+            if len(entries_list) > 0:
+                start_year = entries_list[0].year
+                end_year = entries_list[-1].year
+                total_years = end_year - start_year + 1
+                starting_income = float(entries_list[0].income_amount)
+
+                # Calculate growth rate by comparing first and last year
+                if len(entries_list) > 1:
+                    ending_income = float(entries_list[-1].income_amount)
+                    # Calculate CAGR (Compound Annual Growth Rate)
+                    if starting_income > 0 and total_years > 1:
+                        growth_rate = (
+                            (ending_income / starting_income)
+                            ** (1.0 / (total_years - 1))
+                            - 1
+                        ) * 100
+                    else:
+                        growth_rate = 0.0
+                else:
+                    growth_rate = 0.0
+
+                income_data = {
+                    "startYear": start_year,
+                    "totalYears": total_years,
+                    "startingIncome": starting_income,
+                    "growthRate": growth_rate,
+                }
+
+        # Prepare location data for template
+        saved_locations = []
+        if location_preferences.exists():
+            for loc in location_preferences:
+                # Parse state and area level from location label format "State (area level)"
+                location_label = loc.location
+                if " (" in location_label and location_label.endswith(")"):
+                    state = location_label.split(" (")[0]
+                    area_level = location_label.split(" (")[1].rstrip(")")
+                    saved_locations.append(
+                        {
+                            "state": state,
+                            "areaLevel": area_level.replace(" ", "_"),
+                            "startYear": loc.start_year,
+                            "endYear": loc.end_year,
+                        }
+                    )
+                else:
+                    # Fallback if format is different
+                    saved_locations.append(
+                        {
+                            "state": location_label,
+                            "areaLevel": "average",
+                            "startYear": loc.start_year,
+                            "endYear": loc.end_year,
+                        }
+                    )
+
         return render(
             request,
             self.template_name,
-            {"financial_profile": financial_profile, "income_entries": income_entries},
+            {
+                "financial_profile": financial_profile,
+                "income_entries": income_entries,
+                "income_data": income_data,
+                "location_preferences": saved_locations,
+                "spending_preference": spending_preference,
+                "has_saved_data": has_saved_data,
+            },
         )
 
     def post(self, request):
         # Check if this is a generate results request
         if request.POST.get("generate_results") == "1":
             return self._handle_generate_results(request)
+
+        # Check if this is an update entries request
+        if request.POST.get("update_entries") == "1":
+            return self._handle_update_entries(request)
 
         # Check if this is a save projection request
         if request.POST.get("save_projection") == "1":
@@ -431,8 +517,15 @@ class FinancialInformationView(LoginRequiredMixin, View):
         try:
             import json
 
-            from .ai_cost_service import AICostEstimationService
+            from .coli_data import (
+                AREA_LEVEL_MULTIPLIER,
+                BASE_US_AVG,
+                COLI_BY_STATE_2024,
+                SPENDING_MULTIPLIER,
+                SPENDING_WEIGHTS,
+            )
             from .models import LocationPreference, SpendingPreference
+            from .tax_data import calculate_total_tax
 
             # Get the data
             income_data = json.loads(request.POST.get("income_data", "[]"))
@@ -447,9 +540,12 @@ class FinancialInformationView(LoginRequiredMixin, View):
             # Save location preferences
             LocationPreference.objects.filter(user=request.user).delete()
             for loc in location_data:
+                state = loc.get("state")
+                area_level = loc.get("areaLevel", "average")
+                label = f"{state} ({area_level.replace('_', ' ')})"
                 LocationPreference.objects.create(
                     user=request.user,
-                    location=loc["location"],
+                    location=label,
                     start_year=loc["startYear"],
                     end_year=loc["endYear"],
                 )
@@ -464,13 +560,16 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 leisure_spending=spending_data.get("leisure", "average"),
             )
 
-            # Generate AI costs for each year
-            ai_service = AICostEstimationService()
+            # Generate costs deterministically using COLI
+            # Costs increase by 3% annually (inflation)
             updated_income_data = []
-            previous_cost = None
-            current_location = None
+            current_label = None
+            base_year = None  # Track the first year to calculate annual 3% increases
 
             for year_data in income_data:
+                # Set base year to first year in the data
+                if base_year is None:
+                    base_year = year_data["year"]
                 # Find location for this year
                 location_pref = LocationPreference.objects.filter(
                     user=request.user,
@@ -479,39 +578,62 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 ).first()
 
                 if location_pref:
-                    # Check if location changed
-                    if current_location != location_pref.location:
-                        # Location changed, reset previous cost
-                        previous_cost = None
-                        current_location = location_pref.location
+                    # Parse state and area level from label "State (area level)"
+                    label = location_pref.location
+                    if current_label != label:
+                        current_label = label
+                    try:
+                        state = label.split(" (")[0]
+                        area_level = label[
+                            label.find("(") + 1 : label.find(")")
+                        ].replace(" ", "_")
+                    except Exception:
+                        state = label
+                        area_level = "average"
 
-                    # Generate AI cost estimate with previous cost for stability
-                    result = ai_service.generate_contextual_cost_estimate(
-                        location=location_pref.location,
-                        income=year_data["income"],
-                        housing_spending=spending_data.get("housing", "average"),
-                        travel_spending=spending_data.get("travel", "average"),
-                        food_spending=spending_data.get("food", "average"),
-                        leisure_spending=spending_data.get("leisure", "average"),
-                        previous_cost=previous_cost,
-                        year=year_data["year"],
+                    state_index = (
+                        COLI_BY_STATE_2024.get(
+                            state, COLI_BY_STATE_2024.get("United States", 100.0)
+                        )
+                        / 100.0
+                    )
+                    area_mult = AREA_LEVEL_MULTIPLIER.get(area_level, 1.0)
+
+                    base_cost = BASE_US_AVG * state_index * area_mult
+
+                    # Spending preferences weighted multiplier
+                    h = SPENDING_MULTIPLIER.get(
+                        spending_data.get("housing", "average"), 1.0
+                    )
+                    t = SPENDING_MULTIPLIER.get(
+                        spending_data.get("travel", "average"), 1.0
+                    )
+                    f = SPENDING_MULTIPLIER.get(
+                        spending_data.get("food", "average"), 1.0
+                    )
+                    leisure_mult = SPENDING_MULTIPLIER.get(
+                        spending_data.get("leisure", "average"), 1.0
                     )
 
-                    if result["success"]:
-                        total_cost = result["total_annual_cost"]
-                        max_cost = year_data["income"] * 0.95  # Max 95% of income
-                        final_cost = min(total_cost, max_cost)
-                        previous_cost = final_cost  # Store for next year
-                    else:
-                        # Fallback calculation
-                        final_cost = (
-                            year_data["income"] * 0.6
-                        )  # 60% of income as fallback
-                        previous_cost = final_cost
+                    weighted_mult = (
+                        h * SPENDING_WEIGHTS["housing"]
+                        + t * SPENDING_WEIGHTS["travel"]
+                        + f * SPENDING_WEIGHTS["food"]
+                        + leisure_mult * SPENDING_WEIGHTS["leisure"]
+                    )
+
+                    final_cost = float(base_cost * weighted_mult)
                 else:
-                    # No location found, use fallback
-                    final_cost = year_data["income"] * 0.6
-                    previous_cost = final_cost
+                    # If no location found, use national average with average area level
+                    state_index = COLI_BY_STATE_2024.get("United States", 100.0) / 100.0
+                    final_cost = float(BASE_US_AVG * state_index)
+
+                # Apply 3% annual inflation to costs
+                # Calculate years since base year (0-indexed)
+                years_since_base = year_data["year"] - base_year
+                # Apply compound 3% increase: cost * (1.03 ^ years_since_base)
+                inflation_multiplier = Decimal("1.03") ** years_since_base
+                final_cost = float(Decimal(str(final_cost)) * inflation_multiplier)
 
                 updated_income_data.append(
                     {
@@ -524,25 +646,160 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     }
                 )
 
-            # Save to database
+            # Save to database with tax calculations
+            # IMPORTANT: Taxes are calculated ONLY on gross income, NOT on costs
+            # Formula: Gross Income → Apply Marginal Tax Rates (Federal + State) → After-Tax Income
+            #         After-Tax Income - Costs = Net Savings
             IncomeEntry.objects.filter(user=request.user).delete()
             for year_data in updated_income_data:
+                # Extract state name from location for tax calculation
+                location_str = year_data["location"]
+                state_name = (
+                    location_str.split(" (")[0]
+                    if " (" in location_str
+                    else location_str
+                )
+
+                # Calculate taxes based on GROSS INCOME and state location
+                # Uses progressive marginal tax brackets for federal and state taxes
+                income_float = float(year_data["income"])  # Gross income before taxes
+                tax_info = calculate_total_tax(income_float, state_name)
+
+                # Costs are NOT taxed - they are separate expenses
                 IncomeEntry.objects.create(
                     user=request.user,
                     year=year_data["year"],
-                    income_amount=year_data["income"],
-                    costs=year_data["costs"],
+                    income_amount=year_data["income"],  # Gross income
+                    costs=year_data["costs"],  # Costs (not taxed)
                     location=year_data["location"],
+                    federal_tax=Decimal(str(tax_info["federal_tax"])),
+                    state_tax=Decimal(str(tax_info["state_tax"])),
+                    total_tax=Decimal(str(tax_info["total_tax"])),
+                    after_tax_income=Decimal(
+                        str(tax_info["after_tax_income"])
+                    ),  # Income after taxes
                     savings_rate=0,  # Will be calculated later
                 )
 
+            # Return the calculated data for display in editable table
+            entries_data = []
+            for entry in IncomeEntry.objects.filter(user=request.user).order_by("year"):
+                entries_data.append(
+                    {
+                        "year": entry.year,
+                        "income": float(entry.income_amount),
+                        "federal_tax": float(entry.federal_tax)
+                        if entry.federal_tax
+                        else 0,
+                        "state_tax": float(entry.state_tax) if entry.state_tax else 0,
+                        "total_tax": float(entry.total_tax) if entry.total_tax else 0,
+                        "after_tax_income": float(entry.after_tax_income)
+                        if entry.after_tax_income
+                        else float(entry.income_amount),
+                        "costs": float(entry.costs) if entry.costs else 0,
+                        "location": entry.location or "Unknown",
+                    }
+                )
+
             return JsonResponse(
-                {"success": True, "message": "Results generated and saved successfully"}
+                {
+                    "success": True,
+                    "message": "Results generated and saved successfully",
+                    "entries": entries_data,
+                }
             )
 
         except Exception as e:
             return JsonResponse(
                 {"success": False, "error": f"Error generating results: {str(e)}"}
+            )
+
+    def _handle_update_entries(self, request):
+        """Handle updating edited income and costs values"""
+        try:
+            import json
+
+            from .tax_data import calculate_total_tax
+
+            updates = json.loads(request.POST.get("updates", "[]"))
+
+            if not updates:
+                return JsonResponse({"success": False, "error": "No updates provided"})
+
+            for update in updates:
+                year = update.get("year")
+                income = update.get("income")
+                costs = update.get("costs")
+
+                if not year or income is None or costs is None:
+                    continue
+
+                # Get existing entry to find location/state
+                entry = IncomeEntry.objects.filter(user=request.user, year=year).first()
+
+                if entry:
+                    # Extract state from location for tax calculation
+                    location_str = entry.location or "Unknown"
+                    state_name = (
+                        location_str.split(" (")[0]
+                        if " (" in location_str
+                        else location_str
+                    )
+
+                    # Recalculate taxes based on new income
+                    income_float = float(income)
+                    tax_info = calculate_total_tax(income_float, state_name)
+
+                    # Update entry
+                    entry.income_amount = Decimal(str(income))
+                    entry.costs = Decimal(str(costs))
+                    entry.federal_tax = Decimal(str(tax_info["federal_tax"]))
+                    entry.state_tax = Decimal(str(tax_info["state_tax"]))
+                    entry.total_tax = Decimal(str(tax_info["total_tax"]))
+                    entry.after_tax_income = Decimal(str(tax_info["after_tax_income"]))
+
+                    # Recalculate savings rate
+                    net_savings = entry.after_tax_income - entry.costs
+                    if entry.after_tax_income > 0:
+                        entry.savings_rate = (
+                            net_savings / entry.after_tax_income
+                        ) * 100
+                    else:
+                        entry.savings_rate = 0
+
+                    entry.save()
+
+            # Return updated entries for table refresh
+            entries_data = []
+            for entry in IncomeEntry.objects.filter(user=request.user).order_by("year"):
+                entries_data.append(
+                    {
+                        "year": entry.year,
+                        "income": float(entry.income_amount),
+                        "federal_tax": float(entry.federal_tax)
+                        if entry.federal_tax
+                        else 0,
+                        "state_tax": float(entry.state_tax) if entry.state_tax else 0,
+                        "total_tax": float(entry.total_tax) if entry.total_tax else 0,
+                        "after_tax_income": float(entry.after_tax_income)
+                        if entry.after_tax_income
+                        else float(entry.income_amount),
+                        "costs": float(entry.costs) if entry.costs else 0,
+                        "location": entry.location or "Unknown",
+                    }
+                )
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "message": "Entries updated successfully",
+                    "entries": entries_data,
+                }
+            )
+
+        except Exception as e:
+            return JsonResponse(
+                {"success": False, "error": f"Error updating entries: {str(e)}"}
             )
 
     def _handle_save_projection(self, request):
@@ -739,24 +996,38 @@ class ResultsView(LoginRequiredMixin, View):
         )
         income_entries = []
         for entry in income_entries_qs:
-            net_savings = (
-                float(entry.income_amount) - float(entry.costs)
-                if entry.costs
+            # Use after-tax income for calculations
+            # Formula: Gross Income → Taxes (Marginal Rates) → After-Tax Income → Costs → Net Savings
+            # Costs are NOT taxed - they are separate expenses deducted from after-tax income
+            income_for_calc = (
+                float(entry.after_tax_income)
+                if entry.after_tax_income
                 else float(entry.income_amount)
             )
-            savings_rate = (
-                (net_savings / float(entry.income_amount) * 100)
-                if entry.income_amount > 0
+
+            # Calculate net savings: After-Tax Income - Costs (costs are not taxed)
+            net_savings_after_tax = (
+                income_for_calc - float(entry.costs) if entry.costs else income_for_calc
+            )
+
+            savings_rate_after_tax = (
+                (net_savings_after_tax / income_for_calc * 100)
+                if income_for_calc > 0
                 else 0
             )
+
             income_entries.append(
                 {
                     "year": entry.year,
-                    "income": entry.income_amount,
+                    "income": entry.income_amount,  # Gross income
+                    "federal_tax": entry.federal_tax or 0,
+                    "state_tax": entry.state_tax or 0,
+                    "total_tax": entry.total_tax or 0,
+                    "after_tax_income": entry.after_tax_income or entry.income_amount,
                     "costs": entry.costs,
                     "location": entry.location or "Unknown",
-                    "net_savings": net_savings,
-                    "savings_rate": savings_rate,
+                    "net_savings": net_savings_after_tax,
+                    "savings_rate": savings_rate_after_tax,
                 }
             )
         income_years = [e["year"] for e in income_entries]

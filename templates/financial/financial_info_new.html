@@ -28,7 +28,7 @@
         <div class="container">
             <div class="page-header">
                 <h2>Financial Planning</h2>
-                <p>Plan your financial future with AI-powered cost estimation based on your income, locations, and spending preferences.</p>
+                <p>Plan your financial future using Cost-of-Living indexes by state and your spending preferences.</p>
             </div>
 
             {% if messages %}
@@ -40,61 +40,60 @@
             {% endif %}
 
             <div class="financial-sections">
-                <!-- Step 1: Income Projection -->
+                <!-- Combined Card with Step 1 and Step 2 -->
                 <div class="card form-card step-card">
-                    <div class="card-header">
-                        <div class="step-indicator">
-                            <span class="step-number">Step 1</span>
-                            <h3>Income Projection</h3>
-                        </div>
-                        <div class="form-toolbar">
-                            <span class="pill">Basic Setup</span>
-                        </div>
-                    </div>
-
-                    <div class="card-content">
-                        <form method="post" id="incomeForm" class="pretty-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="income_mode" value="by_year">
-                            
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="startYear">Start Year</label>
-                                    <input class="input" id="startYear" type="number" min="1900" max="2200" required>
-                                </div>
-                                <div class="field">
-                                    <label for="yearsCount">Total Years to Project</label>
-                                    <input class="input" id="yearsCount" type="number" min="1" max="100" required>
-                                </div>
+                    <!-- Step 1: Income Projection -->
+                    <div class="step-section step-section-1">
+                        <div class="card-header">
+                            <div class="step-indicator">
+                                <span class="step-number">Step 1</span>
+                                <h3>Income Projection</h3>
                             </div>
+                        </div>
 
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="baseIncome">Starting Income ($)</label>
-                                    <input class="input" id="baseIncome" type="number" step="0.01" placeholder="e.g. 100000" required>
+                        <div class="card-content">
+                            <form method="post" id="incomeForm" class="pretty-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="income_mode" value="by_year">
+                                
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="startYear">Start Year</label>
+                                        <input class="input" id="startYear" type="number" min="1900" max="2200" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="yearsCount">Total Years to Project</label>
+                                        <input class="input" id="yearsCount" type="number" min="1" max="100" required>
+                                    </div>
                                 </div>
-                                <div class="field">
-                                    <label for="growthPct">Annual Income Growth (%)</label>
-                                    <input class="input" id="growthPct" type="number" step="0.01" placeholder="e.g. 5" required>
+
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="baseIncome">Starting Income ($)</label>
+                                        <input class="input" id="baseIncome" type="number" step="0.01" placeholder="e.g. 100000" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="growthPct">Annual Income Growth (%)</label>
+                                        <input class="input" id="growthPct" type="number" step="0.01" placeholder="e.g. 5" required>
+                                    </div>
                                 </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Step Divider -->
+                    <div class="step-divider"></div>
+
+                    <!-- Step 2: Location & Spending Preferences -->
+                    <div class="step-section step-section-2">
+                        <div class="card-header">
+                            <div class="step-indicator">
+                                <span class="step-number">Step 2</span>
+                                <h3>Location &amp; Spending Preferences</h3>
                             </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Step 2: Location & Spending Preferences -->
-                <div class="card form-card step-card">
-                    <div class="card-header">
-                        <div class="step-indicator">
-                            <span class="step-number">Step 2</span>
-                            <h3>Location & Spending Preferences</h3>
                         </div>
-                        <div class="form-toolbar">
-                            <span class="pill">Lifestyle Planning</span>
-                        </div>
-                    </div>
 
-                    <div class="card-content">
+                        <div class="card-content">
                         <form method="post" id="locationSpendingForm" class="pretty-form">
                             {% csrf_token %}
                             
@@ -104,23 +103,7 @@
                                 <p class="section-description">Add locations and specify how many years you'll live in each place</p>
                             </div>
 
-                            <div id="locationContainer">
-                                <div class="location-row">
-                                    <div class="form-grid">
-                                        <div class="field">
-                                            <label>City/Town, State</label>
-                                            <input class="input" type="text" name="locations[]" placeholder="e.g., Chicago, Illinois" required>
-                                        </div>
-                                        <div class="field">
-                                            <label>Years Living Here</label>
-                                            <input class="input location-years" type="number" name="location_years[]" min="1" max="100" placeholder="e.g., 5" required>
-                                        </div>
-                                        <div class="field">
-                                            <button type="button" class="btn-secondary remove-location">Remove</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div id="locationContainer"></div>
                             
                             <div class="location-controls">
                                 <button type="button" id="addLocation" class="btn-secondary">
@@ -183,15 +166,58 @@
 
                             <div class="form-actions">
                                 <button type="button" id="generateResults" class="btn-primary">
-                                    <i class="fas fa-robot"></i> Generate Results
+                                    Generate Results
                                 </button>
                             </div>
                         </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table Section - Below Step 1 and Step 2 -->
+            <div class="card form-card" id="resultsTableSection" style="display: none;">
+                <div class="card-header">
+                    <h3>Annual Income & Costs</h3>
+                    <div class="form-toolbar">
+                        <button type="button" id="saveEditsBtn" class="btn-primary">Save Changes</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <p class="section-description">Review and edit your annual income and costs. Values are auto-populated from Step 1 and Step 2.</p>
+                    <div class="table-container">
+                        <table class="table" id="resultsTable">
+                            <colgroup>
+                                <col style="width: 16.6667%;">
+                                <col style="width: 16.6667%;">
+                                <col style="width: 16.6667%;">
+                                <col style="width: 16.6667%;">
+                                <col style="width: 16.6667%;">
+                                <col style="width: 16.6667%;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Year</th>
+                                    <th>Location</th>
+                                    <th>Income ($)</th>
+                                    <th>Costs ($)</th>
+                                    <th>After-Tax Income ($)</th>
+                                    <th>Net Savings ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody">
+                                <!-- Table rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    {% if location_preferences %}
+        {{ location_preferences|json_script:"saved-locations" }}
+    {% endif %}
 
     <script>
     // Global variables
@@ -207,56 +233,80 @@
     const growthEl = document.getElementById('growthPct');
     const locationContainer = document.getElementById('locationContainer');
     const addLocationBtn = document.getElementById('addLocation');
-    const generateCostsBtn = document.getElementById('generateCosts');
+    const generateCostsBtn = document.getElementById('generateResults');
     const resultsSection = document.getElementById('resultsSection');
     const resultsTableBody = document.getElementById('resultsTableBody');
 
-    // Load saved form data
-    function loadSavedData() {
-        const savedData = localStorage.getItem('financialFormData');
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                // Only load data if it's not empty/default values
-                if (data.startYear && data.startYear !== '') startYearEl.value = data.startYear;
-                if (data.yearsCount && data.yearsCount !== '') yearsCountEl.value = data.yearsCount;
-                if (data.baseIncome && data.baseIncome !== '') baseIncomeEl.value = data.baseIncome;
-                if (data.growthPct && data.growthPct !== '') growthEl.value = data.growthPct;
-                if (data.housingSpending) document.getElementById('housing_spending').value = data.housingSpending;
-                if (data.travelSpending) document.getElementById('travel_spending').value = data.travelSpending;
-                if (data.foodSpending) document.getElementById('food_spending').value = data.foodSpending;
-                if (data.leisureSpending) document.getElementById('leisure_spending').value = data.leisureSpending;
-                
-                // Load locations
-                if (data.locations && data.locations.length > 0) {
-                    locationContainer.innerHTML = '';
-                    data.locations.forEach((loc, index) => {
-                        addLocationRow();
-                        const locationInputs = document.querySelectorAll('input[name="locations[]"]');
-                        const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
-                        if (locationInputs[index]) locationInputs[index].value = loc.location;
-                        if (yearInputs[index]) yearInputs[index].value = loc.years;
-                    });
-                }
-                
-                updateYearValidation();
-            } catch (e) {
-                // If there's an error parsing saved data, clear it
-                localStorage.removeItem('financialFormData');
+    // State options for dropdown
+    const STATES = [
+        "West Virginia","Oklahoma","Kansas","Mississippi","Alabama","Arkansas","Missouri","Iowa","Michigan","Indiana","Tennessee","Georgia","North Dakota","Louisiana","South Dakota","Texas","Kentucky","Nebraska","New Mexico","Ohio","Illinois","Montana","Minnesota","Pennsylvania","Wyoming","South Carolina","Wisconsin","North Carolina","Virginia","Delaware","Nevada","Colorado","Idaho","Florida","Utah","Arizona","Oregon","Maine","Rhode Island","Connecticut","New Hampshire","Washington","Vermont","New Jersey","Maryland","New York","Alaska","District of Columbia","California","Massachusetts","Hawaii"
+    ];
+
+    const AREA_LEVELS = [
+        { value: 'very_low', label: 'Very Low' },
+        { value: 'less_than_average', label: 'Less Than Average' },
+        { value: 'average', label: 'Average' },
+        { value: 'above_average', label: 'Above Average' },
+        { value: 'very_high', label: 'Very High' }
+    ];
+
+    // Load saved form data from database (passed from server)
+    function loadSavedDataFromDatabase() {
+        // Check if has_saved_data flag is set to true
+        {% if has_saved_data %}
+            // Load income data if available
+            {% if income_data %}
+                startYearEl.value = {{ income_data.startYear }};
+                yearsCountEl.value = {{ income_data.totalYears }};
+                baseIncomeEl.value = {{ income_data.startingIncome }};
+                growthEl.value = {{ income_data.growthRate|floatformat:2 }};
+            {% endif %}
+            
+            // Load spending preferences if available
+            {% if spending_preference %}
+                document.getElementById('housing_spending').value = '{{ spending_preference.housing_spending }}';
+                document.getElementById('travel_spending').value = '{{ spending_preference.travel_spending }}';
+                document.getElementById('food_spending').value = '{{ spending_preference.food_spending }}';
+                document.getElementById('leisure_spending').value = '{{ spending_preference.leisure_spending }}';
+            {% endif %}
+            
+            // Load locations if available
+            const savedLocationsEl = document.getElementById('saved-locations');
+            if (savedLocationsEl) {
+                locationContainer.innerHTML = '';
+                const savedLocations = JSON.parse(savedLocationsEl.textContent);
+                savedLocations.forEach((loc) => {
+                    addLocationRow();
+                    const stateSelects = document.querySelectorAll('select[name="state[]"]');
+                    const areaSelects = document.querySelectorAll('select[name="area_level[]"]');
+                    const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
+                    const lastIndex = stateSelects.length - 1;
+                    if (stateSelects[lastIndex]) {
+                        stateSelects[lastIndex].value = loc.state;
+                        areaSelects[lastIndex].value = loc.areaLevel;
+                        // Calculate years from start and end year
+                        const years = loc.endYear - loc.startYear + 1;
+                        yearInputs[lastIndex].value = years;
+                    }
+                });
             }
-        }
+            
+            updateYearValidation();
+        {% endif %}
     }
 
     // Save form data
     function saveFormData() {
-        const locationInputs = document.querySelectorAll('input[name="locations[]"]');
+        const stateSelects = document.querySelectorAll('select[name="state[]"]');
+        const areaSelects = document.querySelectorAll('select[name="area_level[]"]');
         const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
         const locations = [];
         
-        for (let i = 0; i < locationInputs.length; i++) {
-            if (locationInputs[i].value.trim()) {
+        for (let i = 0; i < stateSelects.length; i++) {
+            if (stateSelects[i].value.trim()) {
                 locations.push({
-                    location: locationInputs[i].value.trim(),
+                    state: stateSelects[i].value.trim(),
+                    areaLevel: areaSelects[i].value,
                     years: parseInt(yearInputs[i].value) || 0
                 });
             }
@@ -284,8 +334,18 @@
         row.innerHTML = `
             <div class="form-grid">
                 <div class="field">
-                    <label>City/Town, State</label>
-                    <input class="input" type="text" name="locations[]" placeholder="e.g., Chicago, Illinois" required>
+                    <label>State</label>
+                    <select class="input" name="state[]" required>
+                        <option value="">Select State</option>
+                        ${STATES.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Area Cost Level (in-state)</label>
+                    <select class="input" name="area_level[]" required>
+                        <option value="">Select Cost Level</option>
+                        ${AREA_LEVELS.map(a => `<option value="${a.value}">${a.label}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="field">
                     <label>Years Living Here</label>
@@ -367,7 +427,8 @@
         }
 
         // Validate locations
-        const locationInputs = document.querySelectorAll('input[name="locations[]"]');
+        const stateSelects = document.querySelectorAll('select[name="state[]"]');
+        const areaSelects = document.querySelectorAll('select[name="area_level[]"]');
         const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
         let totalLocationYears = 0;
         
@@ -400,13 +461,15 @@
         locationData = [];
         let currentYear = startYear;
         
-        for (let i = 0; i < locationInputs.length; i++) {
-            const location = locationInputs[i].value.trim();
+        for (let i = 0; i < stateSelects.length; i++) {
+            const state = stateSelects[i].value.trim();
+            const areaLevel = areaSelects[i].value;
             const years = parseInt(yearInputs[i].value);
             
-            if (location && years) {
+            if (state && years) {
                 locationData.push({
-                    location: location,
+                    state: state,
+                    areaLevel: areaLevel,
                     startYear: currentYear,
                     endYear: currentYear + years - 1,
                     years: years
@@ -438,8 +501,10 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Redirect to results page
-                window.location.href = '/financial/results/';
+                // Display the editable results table
+                displayResultsTable(data.entries);
+                // Scroll to results table
+                document.getElementById('resultsTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 alert('Error generating results: ' + data.error);
             }
@@ -449,6 +514,162 @@
             alert('Error generating results. Please try again.');
         });
     });
+
+    // Helper function to format numbers with commas
+    function formatNumber(num) {
+        return Number(num).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // Display results table with editable fields
+    function displayResultsTable(entries) {
+        const tbody = document.getElementById('resultsTableBody');
+        const resultsSection = document.getElementById('resultsTableSection');
+        
+        if (!entries || entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Ensure table section is visible
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
+        }
+        
+        tbody.innerHTML = '';
+        
+        entries.forEach(entry => {
+            const row = document.createElement('tr');
+            const netSavings = entry.after_tax_income - entry.costs;
+            
+            // Extract just the state name, removing area cost level (e.g., "State (Average)" -> "State")
+            let locationDisplay = entry.location || 'Unknown';
+            if (locationDisplay.includes(' (')) {
+                locationDisplay = locationDisplay.split(' (')[0];
+            }
+            
+            row.innerHTML = `
+                <td class="year-cell" style="font-weight: 700 !important; text-align: center !important;">${entry.year}</td>
+                <td class="location-cell" style="font-weight: 700 !important; text-align: center !important;">${locationDisplay}</td>
+                <td>
+                    <input type="text" class="editable-income" data-year="${entry.year}" 
+                           value="${formatNumber(entry.income)}" data-numeric-value="${entry.income}">
+                </td>
+                <td>
+                    <input type="text" class="editable-costs" data-year="${entry.year}" 
+                           value="${formatNumber(entry.costs)}" data-numeric-value="${entry.costs}">
+                </td>
+                <td class="money after-tax-income" data-year="${entry.year}">$${formatNumber(entry.after_tax_income)}</td>
+                <td class="money net-savings" data-year="${entry.year}">$${formatNumber(netSavings)}</td>
+            `;
+            
+            // Add event listeners to recalculate when income or costs change
+            const incomeInput = row.querySelector('.editable-income');
+            const costsInput = row.querySelector('.editable-costs');
+            
+            // Format input on blur and parse on focus
+            function formatInput(input) {
+                const numericValue = input.dataset.numericValue;
+                input.value = formatNumber(numericValue || input.value.replace(/,/g, ''));
+            }
+            
+            function parseInput(input) {
+                const value = input.value.replace(/,/g, '');
+                input.dataset.numericValue = value;
+                input.value = value;
+            }
+            
+            incomeInput.addEventListener('focus', () => parseInput(incomeInput));
+            incomeInput.addEventListener('blur', () => formatInput(incomeInput));
+            costsInput.addEventListener('focus', () => parseInput(costsInput));
+            costsInput.addEventListener('blur', () => formatInput(costsInput));
+            
+            // Update net savings when income or costs change (taxes will be recalculated on save)
+            const updateNetSavings = () => {
+                // Update data attribute when input changes
+                const incomeValue = incomeInput.value.replace(/,/g, '');
+                const costsValue = costsInput.value.replace(/,/g, '');
+                if (incomeValue) incomeInput.dataset.numericValue = incomeValue;
+                if (costsValue) costsInput.dataset.numericValue = costsValue;
+                
+                const currentIncome = parseFloat(incomeValue) || parseFloat(incomeInput.dataset.numericValue) || 0;
+                const currentCosts = parseFloat(costsValue) || parseFloat(costsInput.dataset.numericValue) || 0;
+                const afterTaxIncome = entry.after_tax_income || (currentIncome * 0.75); // Temporary estimate
+                const netSavings = afterTaxIncome - currentCosts;
+                
+                const netSavingsCell = row.querySelector('.net-savings');
+                netSavingsCell.textContent = '$' + formatNumber(netSavings);
+                netSavingsCell.className = 'money net-savings ' + (netSavings >= 0 ? 'positive' : 'negative');
+                
+                // Update after-tax income display
+                const afterTaxCell = row.querySelector('.after-tax-income');
+                afterTaxCell.textContent = '$' + formatNumber(afterTaxIncome);
+            };
+            
+            incomeInput.addEventListener('input', updateNetSavings);
+            costsInput.addEventListener('input', updateNetSavings);
+            
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Save edited values
+    const saveEditsBtn = document.getElementById('saveEditsBtn');
+    if (saveEditsBtn) {
+        saveEditsBtn.addEventListener('click', function() {
+        const incomeInputs = document.querySelectorAll('.editable-income');
+        const costsInputs = document.querySelectorAll('.editable-costs');
+        const updates = [];
+        
+        incomeInputs.forEach(input => {
+            const year = parseInt(input.dataset.year);
+            // Remove commas before parsing
+            const income = parseFloat(input.value.replace(/,/g, '')) || parseFloat(input.dataset.numericValue) || 0;
+            const costsInput = document.querySelector(`.editable-costs[data-year="${year}"]`);
+            const costs = parseFloat(costsInput.value.replace(/,/g, '')) || parseFloat(costsInput.dataset.numericValue) || 0;
+            
+            updates.push({
+                year: year,
+                income: income,
+                costs: costs
+            });
+        });
+        
+        // Send updates to server
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('update_entries', '1');
+        formData.append('updates', JSON.stringify(updates));
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Keep table visible and update with new data
+                if (data.entries && data.entries.length > 0) {
+                    displayResultsTable(data.entries);
+                    alert('Changes saved successfully! Taxes have been recalculated.');
+                } else {
+                    alert('Changes saved successfully!');
+                }
+            } else {
+                alert('Error saving changes: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving changes. Please try again.');
+        });
+        });
+    }
 
     // Clear form data for new users
     function clearFormData() {
@@ -467,15 +688,19 @@
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
-        // Check if this is a new user (no saved data)
-        const savedData = localStorage.getItem('financialFormData');
-        if (!savedData) {
-            clearFormData();
-        } else {
-            loadSavedData();
-            addLocationRow();
+        // Check if user has saved data in database
+        {% if has_saved_data %}
+            // Load saved data from database
+            loadSavedDataFromDatabase();
+            // Ensure at least one location row exists if no locations were loaded
+            if (locationContainer.querySelectorAll('.location-row').length === 0) {
+                addLocationRow();
+            }
             updateYearValidation();
-        }
+        {% else %}
+            // New user - start with empty form
+            clearFormData();
+        {% endif %}
     });
     </script>
 </body>

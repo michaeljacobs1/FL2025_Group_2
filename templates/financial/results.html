@@ -45,7 +45,7 @@
             <div class="results-section">
                 <div class="card form-card">
                     <div class="card-header">
-                        <h3>Financial Overview</h3>
+                        <h3>Income & Cost Analysis</h3>
                         <div class="form-toolbar">
                             <span class="pill">Income vs Costs</span>
                         </div>
@@ -60,47 +60,29 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Net Worth Projection -->
+            {% if income_entries %}
+            <div class="results-section">
                 <div class="card form-card">
                     <div class="card-header">
-                        <h3>Detailed Breakdown</h3>
+                        <h3>Net Worth Projection</h3>
                         <div class="form-toolbar">
-                            <span class="pill">Year by Year</span>
+                            <span class="pill">Investment Growth</span>
                         </div>
                     </div>
                     <div class="card-content">
-                        <div class="table-container">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Year</th>
-                                        <th>Location</th>
-                                        <th>Income ($)</th>
-                                        <th>Costs ($)</th>
-                                        <th>Net Savings ($)</th>
-                                        <th>Savings Rate (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for entry in income_entries %}
-                                    <tr>
-                                        <td>{{ entry.year }}</td>
-                                        <td class="location-cell">{{ entry.location }}</td>
-                                        <td class="money">${{ entry.income|floatformat:0 }}</td>
-                                        <td class="money">${{ entry.costs|floatformat:0 }}</td>
-                                        <td class="money {% if entry.income > entry.costs %}positive{% else %}negative{% endif %}">
-                                            ${{ entry.net_savings|floatformat:0 }}
-                                        </td>
-                                        <td class="percentage">
-                                            {{ entry.savings_rate|floatformat:1 }}%
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                        <div class="chart-container">
+                            <canvas id="netWorthProjectionChart" width="400" height="200"></canvas>
                         </div>
+                        <p class="chart-description" style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
+                            Shows cumulative net worth assuming your net savings are invested with annual returns. Net worth grows from previous year's value plus returns, then adds that year's net savings.
+                        </p>
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% else %}
             <div class="results-section">
                 <div class="card form-card">
@@ -114,106 +96,6 @@
                 </div>
             </div>
             {% endif %}
-
-            <div class="results-section">
-                <div class="card form-card">
-                    <div class="card-header">
-                        <h3>Run Projection</h3>
-                        <div class="form-toolbar"><span class="pill">Uses your entered years</span></div>
-                    </div>
-                    <div class="card-content">
-                        <form method="post" class="pretty-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="calculate">
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="scenario_id">Scenario</label>
-                                    <select class="input" id="scenario_id" name="scenario_id" required>
-                                        <option value="">Select a scenario...</option>
-                                        {% for scenario in scenarios %}
-                                            <option value="{{ scenario.id }}">{{ scenario.name }} ({{ scenario.annual_return_rate }}% return)</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn-primary">Run Simulation</button>
-                                <a href="{% url 'financial_info' %}" class="btn-secondary">Edit Income Years</a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                {% if projections %}
-                    {% if active_result %}
-                        {{ yearly|json_script:"yearly-data" }}
-                    {% endif %}
-                    {% for projection in projections %}
-                    <div class="card">
-                        <h3>Projection Results - {{ projection.scenario.name|default:"Custom" }} ({{ projection.projected_years }} years)</h3>
-                        <div class="card-content">
-                            <div class="projection-summary">
-                                <div class="summary-grid">
-                                    <div class="summary-item">
-                                        <span class="summary-label">Total Contributions:</span>
-                                        <span class="summary-value money" data-value="{{ projection.total_contributions|default:projection.total_invested }}"></span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-label">Total Gains:</span>
-                                        <span class="summary-value money" data-value="{{ projection.total_gains|default:0 }}"></span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-label">Projected Valuation:</span>
-                                        <span class="summary-value money" data-value="{{ projection.projected_valuation }}"></span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-label">Return on Investment:</span>
-                                        <span class="summary-value">{{ projection.return_on_investment|default:"N/A"|floatformat:1 }}%</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-label">Annual Return Rate:</span>
-                                        <span class="summary-value">{{ projection.annual_return_rate|default:"7.0" }}%</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-label">Monthly Contribution:</span>
-                                        <span class="summary-value money" data-value="{{ projection.monthly_contribution|default:'0.00' }}"></span>
-                                    </div>
-                                </div>
-                                <div class="projection-actions">
-                                    <a href="{% url 'projection_detail' projection.id %}" class="btn-primary">View Details</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% endif %}
-
-                <div class="card">
-                    <h3>Income Timeline (Entered Years)</h3>
-                    <div class="card-content">
-                        <div class="chart-container">
-                            <canvas id="incomeTimelineChart" width="400" height="200"></canvas>
-                        </div>
-                        {% if income_entries %}
-                            {{ income_entries|json_script:"income-entries" }}
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>Net Worth Projection (Aligned to Entered Years)</h3>
-                    <div class="card-content">
-                        <div class="chart-container">
-                            <canvas id="netWorthChart" width="400" height="200"></canvas>
-                        </div>
-                        {% if income_years %}
-                            {{ income_years|json_script:"income-years" }}
-                        {% endif %}
-                        {% if net_worth_series %}
-                            {{ net_worth_series|json_script:"net-worth-series" }}
-                        {% endif %}
-                    </div>
-                </div>
 
                 <!-- AI Cost Estimates Section -->
                 {% if ai_cost_estimates %}
@@ -350,7 +232,6 @@
             <div class="navigation-actions">
                 <div class="action-buttons">
                     <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
-                    <a href="{% url 'scenario_comparison' %}" class="btn-secondary">Compare Scenarios</a>
                     <a href="{% url 'financial_info' %}" class="btn-primary">Update Financial Info</a>
                 </div>
             </div>
@@ -366,100 +247,15 @@
                     '$' + raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             });
 
-            // Income timeline chart with exact years from your entries
-            const entriesEl = document.getElementById("income-entries");
-            const entries = entriesEl ? JSON.parse(entriesEl.textContent) : [];
-            const incomeLabels = entries.map(d => String(d.year));
-            const incomeValues = entries.map(d => Number(d.income_amount));
-
-            if (document.getElementById('incomeTimelineChart')) {
-                const ctx1 = document.getElementById('incomeTimelineChart').getContext('2d');
-                new Chart(ctx1, {
-                    type: 'bar',
-                    data: {
-                        labels: incomeLabels,
-                        datasets: [{
-                            label: 'Income (yearly)',
-                            data: incomeValues,
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { display: true },
-                            title: { display: true, text: 'Income by Year (your entries)' },
-                            tooltip: {
-                                callbacks: {
-                                    label: (c)=>{
-                                        const v = Number(c.parsed.y || 0);
-                                        return 'Income: $' + v.toLocaleString(undefined, {maximumFractionDigits: 2});
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: { callback: (v)=>'$' + Number(v).toLocaleString() }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Net worth chart aligned to the exact same labels
-            const yearsEl = document.getElementById("income-years");
-            const netSeriesEl = document.getElementById("net-worth-series");
-            const nwLabels = yearsEl ? JSON.parse(yearsEl.textContent).map(String) : [];
-            const nwValues = netSeriesEl ? JSON.parse(netSeriesEl.textContent).map(Number) : [];
-
-            if (document.getElementById('netWorthChart')) {
-                const ctx2 = document.getElementById('netWorthChart').getContext('2d');
-                new Chart(ctx2, {
-                    type: 'line',
-                    data: {
-                        labels: nwLabels,
-                        datasets: [{
-                            label: 'Projected Net Worth',
-                            data: nwValues,
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.35
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            title: { display: true, text: 'Projected Net Worth (aligned to your years)' },
-                            legend: { display: true },
-                            tooltip: {
-                                callbacks: {
-                                    label: (c)=>{
-                                        const v = Number(c.parsed.y || 0);
-                                        return 'Net Worth: $' + v.toLocaleString(undefined, {maximumFractionDigits: 2});
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: { title: { display: true, text: 'Year' } },
-                            y: {
-                                beginAtZero: true,
-                                ticks: { callback: (v)=>'$' + Number(v).toLocaleString() },
-                                title: { display: true, text: 'Net Worth ($)' }
-                            }
-                        }
-                    }
-                });
-            }
         })();
 
             // Income vs Costs Chart with Location Segments
+            // IMPORTANT: Costs are NOT adjusted by taxes - they are displayed as-is
+            // Costs increase by 3% annually due to inflation
             {% if income_entries %}
             const incomeData = [
                 {% for entry in income_entries %}
-                { year: {{ entry.year }}, income: {{ entry.income }}, costs: {{ entry.costs|default:0 }}, location: "{{ entry.location }}" },
+                { year: {{ entry.year }}, income: {{ entry.after_tax_income }}, gross_income: {{ entry.income }}, costs: {{ entry.costs|default:0 }}, location: "{{ entry.location }}" },
                 {% endfor %}
             ];
 
@@ -561,15 +357,24 @@
                             },
                             title: {
                                 display: true,
-                                text: 'Income vs Costs Over Time by Location',
+                                text: 'After-Tax Income vs Costs Over Time by Location',
                                 font: { size: 16 }
                             },
                             tooltip: {
                                 callbacks: {
                                     label: (context) => {
                                         const value = Number(context.parsed.y || 0);
-                                        const location = incomeData[context.dataIndex].location;
-                                        return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location})`;
+                                        const entry = incomeData[context.dataIndex];
+                                        const location = entry.location;
+                                        
+                                        // If this is a costs dataset, costs are NOT adjusted by taxes
+                                        if (context.dataset.label.includes('Costs')) {
+                                            return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
+                                        } else {
+                                            // Income is after-tax
+                                            const gross = entry.gross_income || value;
+                                            return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (After Tax, ${location})`;
+                                        }
                                     }
                                 }
                             }
@@ -607,9 +412,167 @@
                             <span class="legend-text">${location} (${yearRange})</span>
                         </div>`;
                     });
-                    legendHTML += '</div><div class="legend-note">Blue lines = Income, Red dashed lines = Costs</div></div>';
+                    legendHTML += '</div><div class="legend-note">Blue lines = After-Tax Income, Red dashed lines = Costs (not adjusted by taxes, increases 3% annually)</div></div>';
                     legendContainer.innerHTML = legendHTML;
                 }
+            }
+
+            // Net Worth Projection Chart
+            // Calculate net worth series with varying annual returns that maintain target CAGR
+            // Generate random annual returns that have a geometric mean equal to the target CAGR
+            function generateVaryingReturns(numYears, targetCAGR, variationRange = 0.10) {
+                // variationRange: how much the returns can vary (e.g., 0.10 = ±10% variation)
+                const returns = [];
+                
+                // Generate random returns centered around target CAGR with variation
+                // Use normal distribution-like approach with bounds
+                for (let i = 0; i < numYears; i++) {
+                    // Generate random variation (uniform distribution, can adjust for normal distribution)
+                    const variation = (Math.random() - 0.5) * variationRange;
+                    const annualReturn = targetCAGR + variation;
+                    // Ensure returns are reasonable (not too negative)
+                    returns.push(Math.max(annualReturn, -0.30)); // Cap at -30% minimum
+                }
+                
+                // Calculate geometric mean of generated returns
+                const product = returns.reduce((acc, r) => acc * (1 + r), 1);
+                const actualCAGR = Math.pow(product, 1 / numYears) - 1;
+                
+                // Adjust returns to ensure geometric mean equals target CAGR
+                // We need: (1+r1)*(1+r2)*...*(1+rn) = (1+targetCAGR)^n
+                // So: (1+ri_adjusted) = (1+ri) * ((1+targetCAGR)/(1+actualCAGR))
+                const adjustmentFactor = (1 + targetCAGR) / (1 + actualCAGR);
+                const adjustedReturns = returns.map(r => ((1 + r) * adjustmentFactor) - 1);
+                
+                // Verify the geometric mean
+                const adjustedProduct = adjustedReturns.reduce((acc, r) => acc * (1 + r), 1);
+                const verifiedCAGR = Math.pow(adjustedProduct, 1 / numYears) - 1;
+                
+                return adjustedReturns;
+            }
+
+            function calculateNetWorth(savings, targetCAGR) {
+                const netWorthSeries = [];
+                let currentNetWorth = 0;
+                
+                // Generate varying annual returns that maintain the target CAGR
+                const annualReturns = generateVaryingReturns(savings.length, targetCAGR);
+                
+                for (let i = 0; i < savings.length; i++) {
+                    // For first year, just set net worth to net savings
+                    if (i === 0) {
+                        currentNetWorth = savings[i];
+                    } else {
+                        // For subsequent years: grow previous net worth by varying return rate, then add new savings
+                        currentNetWorth = (currentNetWorth * (1 + annualReturns[i])) + savings[i];
+                    }
+                    netWorthSeries.push(currentNetWorth);
+                }
+                
+                return { netWorth: netWorthSeries, returns: annualReturns };
+            }
+
+            const netSavings = savings; // Net savings per year (income - costs)
+            const yearsLabels = years.map(y => String(y));
+
+            // Calculate net worth for each scenario with varying returns
+            const aggressiveResult = calculateNetWorth(netSavings, 0.10); // 10% CAGR
+            const moderateResult = calculateNetWorth(netSavings, 0.07);  // 7% CAGR
+            const conservativeResult = calculateNetWorth(netSavings, 0.04); // 4% CAGR
+            
+            const aggressiveNetWorth = aggressiveResult.netWorth;
+            const moderateNetWorth = moderateResult.netWorth;
+            const conservativeNetWorth = conservativeResult.netWorth;
+
+            if (document.getElementById('netWorthProjectionChart')) {
+                const ctxNW = document.getElementById('netWorthProjectionChart').getContext('2d');
+
+                new Chart(ctxNW, {
+                    type: 'line',
+                    data: {
+                        labels: yearsLabels,
+                        datasets: [
+                            {
+                                label: 'Aggressive (10% annual return)',
+                                data: aggressiveNetWorth,
+                                borderColor: '#10b981', // Green for aggressive
+                                backgroundColor: '#10b98120',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Moderate (7% annual return)',
+                                data: moderateNetWorth,
+                                borderColor: '#3b82f6', // Blue for moderate
+                                backgroundColor: '#3b82f620',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Conservative (4% annual return)',
+                                data: conservativeNetWorth,
+                                borderColor: '#f59e0b', // Orange/amber for conservative
+                                backgroundColor: '#f59e0b20',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Net Worth Projection Over Time',
+                                font: { size: 16 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const value = Number(context.parsed.y || 0);
+                                        return context.dataset.label + ': $' + value.toLocaleString(undefined, {
+                                            maximumFractionDigits: 0,
+                                            minimumFractionDigits: 0
+                                        });
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Year' },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (v) => '$' + Number(v).toLocaleString(),
+                                    maxTicksLimit: 8
+                                },
+                                title: { display: true, text: 'Net Worth ($)' },
+                                grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
             }
             {% endif %}
     </script>
