@@ -159,9 +159,6 @@ class FinancialDashboardView(LoginRequiredMixin, TemplateView):
             context["income_entries"] = []
             context["has_income_entries"] = False
 
-        # Check if personal info is completed - user must have manually filled in name
-        # Name is the primary required field that user must enter manually
-        # Only check name field (email can be auto-filled from user account)
         context["personal_info_complete"] = bool(
             personal_info.name
             and str(personal_info.name).strip()
@@ -269,7 +266,6 @@ class PersonalInformationView(LoginRequiredMixin, View):
         else:
             try:
                 parsed_date = datetime.strptime(date_of_birth_str, "%Y-%m-%d").date()
-                # Validate date is reasonable (not in future, not too old)
                 today = date.today()
                 if parsed_date > today:
                     errors.append("Date of birth cannot be in the future.")
@@ -338,7 +334,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
         # Determine if user has any saved data
         has_saved_data = income_entries.exists() or location_preferences.exists()
 
-        # Extract income parameters from existing entries if they exist
         income_data = None
         if income_entries.exists():
             entries_list = list(income_entries)
@@ -351,7 +346,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 # Calculate growth rate by comparing first and last year
                 if len(entries_list) > 1:
                     ending_income = float(entries_list[-1].income_amount)
-                    # Calculate CAGR (Compound Annual Growth Rate)
                     if starting_income > 0 and total_years > 1:
                         growth_rate = (
                             (ending_income / starting_income)
@@ -374,7 +368,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
         saved_locations = []
         if location_preferences.exists():
             for loc in location_preferences:
-                # Parse state and area level from location label format "State (area level)"
                 location_label = loc.location
                 if " (" in location_label and location_label.endswith(")"):
                     state = location_label.split(" (")[0]
@@ -480,7 +473,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     final_rate = Decimal(str(round(rate_value, 2)))
                 elif rate:
                     rate_value = float(rate)
-                    # Clamp to valid range for DecimalField(max_digits=5, decimal_places=2)
                     rate_value = max(-999.99, min(999.99, rate_value))
                     final_rate = Decimal(str(round(rate_value, 2)))
 
@@ -571,7 +563,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
 
     def _handle_ai_cost_generation(self, request):
         """Handle AI cost generation for income timeline"""
-        # Check if OpenAI API key is configured
         import os
 
         from .ai_cost_service import AICostEstimationService
@@ -659,7 +650,7 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 if result["success"]:
                     # Ensure costs don't exceed income
                     total_cost = result["total_annual_cost"]
-                    max_cost = float(income) * 0.95  # Max 95% of income
+                    max_cost = float(income) * 0.95
                     final_cost = min(total_cost, max_cost)
                     generated_costs.append(final_cost)
                 else:
@@ -744,7 +735,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 ).first()
 
                 if location_pref:
-                    # Parse state and area level from label "State (area level)"
                     label = location_pref.location
                     if current_label != label:
                         current_label = label
@@ -794,10 +784,7 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     state_index = COLI_BY_STATE_2024.get("United States", 100.0) / 100.0
                     final_cost = float(BASE_US_AVG * state_index)
 
-                # Apply 3% annual inflation to costs
-                # Calculate years since base year (0-indexed)
                 years_since_base = year_data["year"] - base_year
-                # Apply compound 3% increase: cost * (1.03 ^ years_since_base)
                 inflation_multiplier = Decimal("1.03") ** years_since_base
                 final_cost = float(Decimal(str(final_cost)) * inflation_multiplier)
 
@@ -812,10 +799,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     }
                 )
 
-            # Save to database with tax calculations
-            # IMPORTANT: Taxes are calculated ONLY on gross income, NOT on costs
-            # Formula: Gross Income → Apply Marginal Tax Rates (Federal + State) → After-Tax Income
-            #         After-Tax Income - Costs = Net Savings
             IncomeEntry.objects.filter(user=request.user).delete()
             for year_data in updated_income_data:
                 # Extract state name from location for tax calculation
@@ -826,13 +809,9 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     else location_str
                 )
 
-                # Calculate taxes based on GROSS INCOME and state location
-                # Uses progressive marginal tax brackets for federal and state taxes
-                income_float = float(year_data["income"])  # Gross income before taxes
+                income_float = float(year_data["income"])
                 tax_info = calculate_total_tax(income_float, state_name)
 
-                # Clamp values to database field constraints
-                # income_amount: max_digits=12, decimal_places=2 -> max: 9999999999.99
                 income_value = Decimal(str(year_data["income"]))
                 max_income = Decimal("9999999999.99")
                 min_income = Decimal("-9999999999.99")
@@ -857,21 +836,19 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     min(max_income, Decimal(str(tax_info["after_tax_income"]))),
                 )
 
-                # Costs are NOT taxed - they are separate expenses
                 IncomeEntry.objects.create(
                     user=request.user,
                     year=year_data["year"],
-                    income_amount=income_clamped,  # Gross income (clamped)
-                    costs=costs_clamped,  # Costs (not taxed, clamped)
+                    income_amount=income_clamped,
+                    costs=costs_clamped,
                     location=year_data["location"],
                     federal_tax=federal_tax_clamped,
                     state_tax=state_tax_clamped,
                     total_tax=total_tax_clamped,
-                    after_tax_income=after_tax_income_clamped,  # Income after taxes (clamped)
-                    savings_rate=0,  # Will be calculated later
+                    after_tax_income=after_tax_income_clamped,
+                    savings_rate=0,
                 )
 
-            # Return the calculated data for display in editable table
             entries_data = []
             for entry in IncomeEntry.objects.filter(user=request.user).order_by("year"):
                 entries_data.append(
@@ -924,7 +901,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 if not year or income is None or costs is None:
                     continue
 
-                # Get existing entry to find location/state
                 entry = IncomeEntry.objects.filter(user=request.user, year=year).first()
 
                 if entry:
@@ -940,8 +916,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     income_float = float(income)
                     tax_info = calculate_total_tax(income_float, state_name)
 
-                    # Clamp values to database field constraints
-                    # income_amount, costs: max_digits=12, decimal_places=2 -> max: 9999999999.99
                     max_value = Decimal("9999999999.99")
                     min_value = Decimal("-9999999999.99")
 
@@ -977,8 +951,7 @@ class FinancialInformationView(LoginRequiredMixin, View):
                         savings_rate_value = (
                             net_savings / entry.after_tax_income
                         ) * 100
-                        # Clamp to valid range for DecimalField(max_digits=5, decimal_places=2)
-                        # Range: -999.99 to 999.99
+
                         savings_rate_value = max(
                             -999.99, min(999.99, savings_rate_value)
                         )
@@ -1043,7 +1016,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
             max_value = Decimal("9999999999.99")
             min_value = Decimal("-9999999999.99")
             for i, (year, income, cost) in enumerate(zip(years, incomes, costs)):
-                # Clamp values to database constraints
                 income_clamped = max(
                     min_value,
                     min(max_value, Decimal(str(income)) if income else Decimal("0")),
@@ -1058,7 +1030,7 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     year=int(year),
                     income_amount=income_clamped,
                     costs=costs_clamped,
-                    savings_rate=0,  # Will be calculated later
+                    savings_rate=0,
                 )
 
             return JsonResponse(
@@ -1075,7 +1047,6 @@ class FinancialInformationView(LoginRequiredMixin, View):
 
     def _handle_ai_cost_estimation(self, request):
         """Handle AI cost estimation form submission"""
-        # Check if OpenAI API key is configured
         import os
 
         from .ai_cost_service import AICostEstimationService
@@ -1169,7 +1140,6 @@ class IncomeTimelineView(LoginRequiredMixin, View):
         income_source = request.POST.get("income_source", "Salary")
 
         if year and income_amount:
-            # Clamp income_amount to database constraints
             income_clamped = max(
                 Decimal("-9999999999.99"),
                 min(Decimal("9999999999.99"), Decimal(income_amount)),
@@ -1233,9 +1203,6 @@ class ResultsView(LoginRequiredMixin, View):
         )
         income_entries = []
         for entry in income_entries_qs:
-            # Use after-tax income for calculations
-            # Formula: Gross Income → Taxes (Marginal Rates) → After-Tax Income → Costs → Net Savings
-            # Costs are NOT taxed - they are separate expenses deducted from after-tax income
             income_for_calc = (
                 float(entry.after_tax_income)
                 if entry.after_tax_income
@@ -1256,7 +1223,7 @@ class ResultsView(LoginRequiredMixin, View):
             income_entries.append(
                 {
                     "year": entry.year,
-                    "income": entry.income_amount,  # Gross income
+                    "income": entry.income_amount,
                     "federal_tax": entry.federal_tax or 0,
                     "state_tax": entry.state_tax or 0,
                     "total_tax": entry.total_tax or 0,

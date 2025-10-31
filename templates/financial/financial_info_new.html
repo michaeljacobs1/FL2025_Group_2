@@ -260,7 +260,6 @@
 
     // Load saved form data from database (passed from server)
     function loadSavedDataFromDatabase() {
-        // First, try to load from localStorage (preserves user's manual changes)
         const savedData = localStorage.getItem('financialFormData');
         let formData = null;
         if (savedData) {
@@ -299,12 +298,10 @@
         
         // Check if has_saved_data flag is set to true
         {% if has_saved_data %}
-            // Load income data from database if localStorage doesn't have it
             {% if income_data %}
                 if (!startYearEl.value) startYearEl.value = {{ income_data.startYear }};
                 if (!yearsCountEl.value) yearsCountEl.value = {{ income_data.totalYears }};
                 if (!baseIncomeEl.value) baseIncomeEl.value = {{ income_data.startingIncome }};
-                // Only load growth rate from database if not already set from localStorage
                 if (!growthEl.value) growthEl.value = {{ income_data.growthRate|floatformat:2 }};
             {% endif %}
             
@@ -338,7 +335,6 @@
                     if (stateSelects[lastIndex]) {
                         stateSelects[lastIndex].value = loc.state;
                         areaSelects[lastIndex].value = loc.areaLevel;
-                        // Calculate years from start and end year
                         const years = loc.endYear - loc.startYear + 1;
                         yearInputs[lastIndex].value = years;
                     }
@@ -469,7 +465,6 @@
 
     // Save form data to localStorage whenever Step 1 fields change
     function setupFormAutoSave() {
-        // Save when any Step 1 input changes
         [startYearEl, yearsCountEl, baseIncomeEl, growthEl].forEach(input => {
             if (input) {
                 input.addEventListener('input', saveFormData);
@@ -576,9 +571,7 @@
             if (data.success) {
                 // Display the editable results table
                 displayResultsTable(data.entries);
-                // Scroll to results table
                 document.getElementById('resultsTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Enable View Results button
                 const viewResultsBtn = document.getElementById('viewResultsBtn');
                 const viewResultsBtnActive = document.getElementById('viewResultsBtnActive');
                 if (viewResultsBtn) {
@@ -629,7 +622,6 @@
             const row = document.createElement('tr');
             const netSavings = entry.after_tax_income - entry.costs;
             
-            // Extract just the state name, removing area cost level (e.g., "State (Average)" -> "State")
             let locationDisplay = entry.location || 'Unknown';
             if (locationDisplay.includes(' (')) {
                 locationDisplay = locationDisplay.split(' (')[0];
@@ -671,9 +663,7 @@
             costsInput.addEventListener('focus', () => parseInput(costsInput));
             costsInput.addEventListener('blur', () => formatInput(costsInput));
             
-            // Calculate initial tax rate from entry data for estimation
-            // This will be used to estimate after-tax income when income changes
-            let initialTaxRate = 0.25; // Default to 25% if no data
+     
             if (entry.income && entry.income > 0 && entry.after_tax_income !== undefined && entry.after_tax_income !== null) {
                 const calculatedRate = (entry.income - entry.after_tax_income) / entry.income;
                 // Validate tax rate is reasonable (0% to 50%)
@@ -684,7 +674,6 @@
             
             // Update net savings when income or costs change (taxes will be recalculated on save)
             const updateNetSavings = () => {
-                // Update data attribute when input changes
                 const incomeValue = incomeInput.value.replace(/,/g, '');
                 const costsValue = costsInput.value.replace(/,/g, '');
                 if (incomeValue) incomeInput.dataset.numericValue = incomeValue;
@@ -693,9 +682,7 @@
                 const currentIncome = parseFloat(incomeValue) || parseFloat(incomeInput.dataset.numericValue) || 0;
                 const currentCosts = parseFloat(costsValue) || parseFloat(costsInput.dataset.numericValue) || 0;
                 
-                // Recalculate after-tax income based on current income using the estimated tax rate
-                // Always recalculate based on current income to keep display in sync
-                // Clamp tax rate to reasonable bounds (0% to 50%)
+              
                 const estimatedTaxRate = Math.max(0, Math.min(0.5, initialTaxRate));
                 let afterTaxIncome;
                 if (currentIncome > 0) {
@@ -796,7 +783,6 @@
         {% if has_saved_data %}
             // Load saved data from database
             loadSavedDataFromDatabase();
-            // Ensure at least one location row exists if no locations were loaded
             if (locationContainer.querySelectorAll('.location-row').length === 0) {
                 addLocationRow();
             }
@@ -813,7 +799,6 @@
             clearFormData();
         {% endif %}
 
-        // Load existing income entries on page load if they exist
         {% if entries_data_json %}
             try {
                 const existingEntries = JSON.parse('{{ entries_data_json|escapejs }}');

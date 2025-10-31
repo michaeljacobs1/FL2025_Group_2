@@ -17,10 +17,6 @@ FEDERAL_TAX_BRACKETS_2024 = [
 # Standard Deduction 2024
 FEDERAL_STANDARD_DEDUCTION_2024 = 14600  # Single filer
 
-# State Income Tax Rates by State (2024)
-# Format: State name -> list of brackets [{"min": 0, "max": X, "rate": Y}]
-# States with flat rates use a single bracket
-# States with no income tax return 0
 
 STATE_TAX_RATES_2024 = {
     "Alabama": [

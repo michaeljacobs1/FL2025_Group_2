@@ -299,7 +299,6 @@ body {
   color: #1e293b;
 }
 
-/* Professional Dashboard Styles - Uniform & Boxey */
 .dashboard-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -329,7 +328,6 @@ body {
   font-weight: 400;
 }
 
-/* Stats Grid - Top KPI Cards - Uniform Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -446,7 +444,6 @@ body {
   color: #2563eb;
 }
 
-/* Content Grid - Main Information Cards - Uniform Grid */
 .dashboard-content-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1499,13 +1496,11 @@ body {
   margin: 0;
 }
 
-/* Evenly distribute all columns - each column gets equal width */
 #resultsTable colgroup,
 #resultsTable col {
   width: 16.6667%;
 }
 
-/* Set widths on header and body cells to ensure equal distribution */
 #resultsTable thead th {
   padding: 1rem 1.5rem;
   box-sizing: border-box;
@@ -1516,7 +1511,6 @@ body {
   box-sizing: border-box;
 }
 
-/* Ensure inputs inside table cells don't exceed column width */
 #resultsTable .editable-income,
 #resultsTable .editable-costs {
   width: 100%;
@@ -1544,7 +1538,6 @@ body {
   border-bottom: 1px solid #e5e7eb;
 }
 
-/* Year and Location columns - bold and centered (must come after all general rules) */
 #resultsTable th:nth-child(1),
 #resultsTable td:nth-child(1),
 #resultsTable th:nth-child(2),
@@ -1555,7 +1548,6 @@ body {
   text-align: center !important;
 }
 
-/* Ensure year and location cell classes are also bold and centered - MUST be very specific */
 #resultsTable tbody td.year-cell,
 #resultsTable tbody td.location-cell,
 #resultsTable thead th:nth-child(1),
@@ -1710,13 +1702,9 @@ body {
 .info-section {
   background-color: #ffffff;
   max-width: 1400px;
-  /* extends a bit beyond card container */
   margin: 4rem auto;
-  /* centers it on the page */
   padding: 4rem 3rem;
-  /* adds side breathing space */
   border-radius: 1rem;
-  /* optional: soft rounded edges */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
 }
@@ -1732,7 +1720,6 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
   max-width: 1100px;
-  /* keeps the cards narrower */
   margin: 0 auto;
 }
 
@@ -1769,7 +1756,6 @@ body {
   display: block;
 }
 
-/* Form Grid - Consistent Spacing */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1802,7 +1788,6 @@ body {
   margin-bottom: 0;
 }
 
-/* Editable table inputs */
 .editable-income,
 .editable-costs {
   width: 100%;
@@ -2059,7 +2044,6 @@ body {
   display: block;
 }
 
-/* Financial Info Page - Professional Spacing & Layout */
 .financial-sections {
   max-width: 1400px;
   margin: 0 auto;
@@ -2105,7 +2089,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Section Headers - Consistent Professional Spacing */
 .section-header {
   display: block;
   margin: 2.5rem 0 1rem 0;
@@ -2205,7 +2188,6 @@ input[name="costs[]"]:focus {
   border-color: #3b82f6;
 }
 
-/* Step-based Design - Professional Layout */
 .step-card {
   background: #ffffff;
   border: 2px solid #e5e7eb;
@@ -2295,7 +2277,6 @@ input[name="costs[]"]:focus {
   background: #10b981;
 }
 
-/* Location Controls - Professional Spacing */
 .location-controls {
   display: flex;
   justify-content: space-between;
@@ -2473,7 +2454,6 @@ input[name="costs[]"]:focus {
   text-align: right;
 }
 
-/* Welcome Page Styles - Professional & Neat */
 .welcome-container {
   max-width: 1200px;
   margin: 0 auto;
