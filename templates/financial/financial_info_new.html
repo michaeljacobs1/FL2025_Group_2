@@ -12,7 +12,7 @@
         <div class="nav-container">
             <h1 class="nav-brand">Financial Planner</h1>
             <div class="nav-links">
-                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
                 <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link active">Financial Info</a>
                 <a href="{% url 'results' %}" class="nav-link">Results</a>
@@ -168,6 +168,12 @@
                                 <button type="button" id="generateResults" class="btn-primary">
                                     Generate Results
                                 </button>
+                                <span id="viewResultsBtn" class="view-results-disabled" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #9ca3af; color: white; border-radius: 0.5rem; font-weight: 600; opacity: 0.6; cursor: not-allowed; user-select: none;">
+                                    View Results
+                                </span>
+                                <a href="{% url 'results' %}" id="viewResultsBtnActive" class="btn-secondary" style="text-decoration: none; display: none;">
+                                    View Results
+                                </a>
                             </div>
                         </form>
                         </div>
@@ -176,7 +182,8 @@
             </div>
 
             <!-- Results Table Section - Below Step 1 and Step 2 -->
-            <div class="card form-card" id="resultsTableSection" style="display: none;">
+            <div class="financial-sections" style="margin-top: 2rem;">
+                <div class="card form-card" id="resultsTableSection" style="display: none;">
                 <div class="card-header">
                     <h3>Annual Income & Costs</h3>
                     <div class="form-toolbar">
@@ -210,6 +217,7 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -252,27 +260,73 @@
 
     // Load saved form data from database (passed from server)
     function loadSavedDataFromDatabase() {
+        // First, try to load from localStorage (preserves user's manual changes)
+        const savedData = localStorage.getItem('financialFormData');
+        let formData = null;
+        if (savedData) {
+            try {
+                formData = JSON.parse(savedData);
+                // Load all form fields from localStorage
+                if (formData.startYear) startYearEl.value = formData.startYear;
+                if (formData.yearsCount) yearsCountEl.value = formData.yearsCount;
+                if (formData.baseIncome) baseIncomeEl.value = formData.baseIncome;
+                if (formData.growthPct) growthEl.value = formData.growthPct; // Preserve user's growth rate
+                if (formData.housingSpending) document.getElementById('housing_spending').value = formData.housingSpending;
+                if (formData.travelSpending) document.getElementById('travel_spending').value = formData.travelSpending;
+                if (formData.foodSpending) document.getElementById('food_spending').value = formData.foodSpending;
+                if (formData.leisureSpending) document.getElementById('leisure_spending').value = formData.leisureSpending;
+                
+                // Load locations from localStorage
+                if (formData.locations && formData.locations.length > 0) {
+                    locationContainer.innerHTML = '';
+                    formData.locations.forEach((loc) => {
+                        addLocationRow();
+                        const stateSelects = document.querySelectorAll('select[name="state[]"]');
+                        const areaSelects = document.querySelectorAll('select[name="area_level[]"]');
+                        const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
+                        const lastIndex = stateSelects.length - 1;
+                        if (stateSelects[lastIndex]) {
+                            stateSelects[lastIndex].value = loc.state;
+                            areaSelects[lastIndex].value = loc.areaLevel;
+                            yearInputs[lastIndex].value = loc.years;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading from localStorage:', e);
+            }
+        }
+        
         // Check if has_saved_data flag is set to true
         {% if has_saved_data %}
-            // Load income data if available
+            // Load income data from database if localStorage doesn't have it
             {% if income_data %}
-                startYearEl.value = {{ income_data.startYear }};
-                yearsCountEl.value = {{ income_data.totalYears }};
-                baseIncomeEl.value = {{ income_data.startingIncome }};
-                growthEl.value = {{ income_data.growthRate|floatformat:2 }};
+                if (!startYearEl.value) startYearEl.value = {{ income_data.startYear }};
+                if (!yearsCountEl.value) yearsCountEl.value = {{ income_data.totalYears }};
+                if (!baseIncomeEl.value) baseIncomeEl.value = {{ income_data.startingIncome }};
+                // Only load growth rate from database if not already set from localStorage
+                if (!growthEl.value) growthEl.value = {{ income_data.growthRate|floatformat:2 }};
             {% endif %}
             
-            // Load spending preferences if available
+            // Load spending preferences from database if not in localStorage
             {% if spending_preference %}
-                document.getElementById('housing_spending').value = '{{ spending_preference.housing_spending }}';
-                document.getElementById('travel_spending').value = '{{ spending_preference.travel_spending }}';
-                document.getElementById('food_spending').value = '{{ spending_preference.food_spending }}';
-                document.getElementById('leisure_spending').value = '{{ spending_preference.leisure_spending }}';
+                if (!document.getElementById('housing_spending').value) {
+                    document.getElementById('housing_spending').value = '{{ spending_preference.housing_spending }}';
+                }
+                if (!document.getElementById('travel_spending').value) {
+                    document.getElementById('travel_spending').value = '{{ spending_preference.travel_spending }}';
+                }
+                if (!document.getElementById('food_spending').value) {
+                    document.getElementById('food_spending').value = '{{ spending_preference.food_spending }}';
+                }
+                if (!document.getElementById('leisure_spending').value) {
+                    document.getElementById('leisure_spending').value = '{{ spending_preference.leisure_spending }}';
+                }
             {% endif %}
             
-            // Load locations if available
+            // Load locations from database if not in localStorage
             const savedLocationsEl = document.getElementById('saved-locations');
-            if (savedLocationsEl) {
+            if (savedLocationsEl && locationContainer.querySelectorAll('.location-row').length === 0) {
                 locationContainer.innerHTML = '';
                 const savedLocations = JSON.parse(savedLocationsEl.textContent);
                 savedLocations.forEach((loc) => {
@@ -413,6 +467,25 @@
         }
     });
 
+    // Save form data to localStorage whenever Step 1 fields change
+    function setupFormAutoSave() {
+        // Save when any Step 1 input changes
+        [startYearEl, yearsCountEl, baseIncomeEl, growthEl].forEach(input => {
+            if (input) {
+                input.addEventListener('input', saveFormData);
+                input.addEventListener('change', saveFormData);
+            }
+        });
+        
+        // Save when spending preferences change
+        ['housing_spending', 'travel_spending', 'food_spending', 'leisure_spending'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', saveFormData);
+            }
+        });
+    }
+
     // Generate Results and redirect to results page
     document.getElementById('generateResults').addEventListener('click', function() {
         // Validate form
@@ -505,6 +578,15 @@
                 displayResultsTable(data.entries);
                 // Scroll to results table
                 document.getElementById('resultsTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Enable View Results button
+                const viewResultsBtn = document.getElementById('viewResultsBtn');
+                const viewResultsBtnActive = document.getElementById('viewResultsBtnActive');
+                if (viewResultsBtn) {
+                    viewResultsBtn.style.display = 'none';
+                }
+                if (viewResultsBtnActive) {
+                    viewResultsBtnActive.style.display = 'inline-block';
+                }
             } else {
                 alert('Error generating results: ' + data.error);
             }
@@ -589,6 +671,17 @@
             costsInput.addEventListener('focus', () => parseInput(costsInput));
             costsInput.addEventListener('blur', () => formatInput(costsInput));
             
+            // Calculate initial tax rate from entry data for estimation
+            // This will be used to estimate after-tax income when income changes
+            let initialTaxRate = 0.25; // Default to 25% if no data
+            if (entry.income && entry.income > 0 && entry.after_tax_income !== undefined && entry.after_tax_income !== null) {
+                const calculatedRate = (entry.income - entry.after_tax_income) / entry.income;
+                // Validate tax rate is reasonable (0% to 50%)
+                if (!isNaN(calculatedRate) && calculatedRate >= 0 && calculatedRate <= 0.5) {
+                    initialTaxRate = calculatedRate;
+                }
+            }
+            
             // Update net savings when income or costs change (taxes will be recalculated on save)
             const updateNetSavings = () => {
                 // Update data attribute when input changes
@@ -599,7 +692,18 @@
                 
                 const currentIncome = parseFloat(incomeValue) || parseFloat(incomeInput.dataset.numericValue) || 0;
                 const currentCosts = parseFloat(costsValue) || parseFloat(costsInput.dataset.numericValue) || 0;
-                const afterTaxIncome = entry.after_tax_income || (currentIncome * 0.75); // Temporary estimate
+                
+                // Recalculate after-tax income based on current income using the estimated tax rate
+                // Always recalculate based on current income to keep display in sync
+                // Clamp tax rate to reasonable bounds (0% to 50%)
+                const estimatedTaxRate = Math.max(0, Math.min(0.5, initialTaxRate));
+                let afterTaxIncome;
+                if (currentIncome > 0) {
+                    afterTaxIncome = currentIncome * (1 - estimatedTaxRate);
+                } else {
+                    afterTaxIncome = 0;
+                }
+                
                 const netSavings = afterTaxIncome - currentCosts;
                 
                 const netSavingsCell = row.querySelector('.net-savings');
@@ -697,10 +801,39 @@
                 addLocationRow();
             }
             updateYearValidation();
+            // Enable View Results button if results already exist
+            const viewResultsBtn = document.getElementById('viewResultsBtn');
+            const viewResultsBtnActive = document.getElementById('viewResultsBtnActive');
+            if (viewResultsBtn && viewResultsBtnActive) {
+                viewResultsBtn.style.display = 'none';
+                viewResultsBtnActive.style.display = 'inline-block';
+            }
         {% else %}
             // New user - start with empty form
             clearFormData();
         {% endif %}
+
+        // Load existing income entries on page load if they exist
+        {% if entries_data_json %}
+            try {
+                const existingEntries = JSON.parse('{{ entries_data_json|escapejs }}');
+                if (existingEntries && existingEntries.length > 0) {
+                    displayResultsTable(existingEntries);
+                    // Enable View Results button if entries exist
+                    const viewResultsBtn = document.getElementById('viewResultsBtn');
+                    const viewResultsBtnActive = document.getElementById('viewResultsBtnActive');
+                    if (viewResultsBtn && viewResultsBtnActive) {
+                        viewResultsBtn.style.display = 'none';
+                        viewResultsBtnActive.style.display = 'inline-block';
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading existing entries:', e);
+            }
+        {% endif %}
+        
+        // Set up auto-save for form fields
+        setupFormAutoSave();
     });
     </script>
 </body>

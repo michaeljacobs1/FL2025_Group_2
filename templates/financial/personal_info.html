@@ -12,7 +12,7 @@
         <div class="nav-container">
             <h1 class="nav-brand">Financial Planner</h1>
             <div class="nav-links">
-                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
                 <a href="{% url 'personal_info' %}" class="nav-link active">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
                 <a href="{% url 'results' %}" class="nav-link">Results</a>
@@ -25,12 +25,7 @@
     </nav>
 
     <main class="main-content">
-        <div class="container">
-            <div class="page-header">
-                <h2>Personal Information</h2>
-                <p>Please provide your personal details to get started with your financial planning.</p>
-            </div>
-
+        <div class="container" style="max-width: 1000px; padding-top: 2rem;">
             {% if messages %}
                 <div class="messages">
                     {% for message in messages %}
@@ -39,57 +34,388 @@
                 </div>
             {% endif %}
 
-            <div class="form-section">
-                <div class="card">
-                    <h3>Personal Details</h3>
-                    <div class="card-content">
-                        <form method="post" class="personal-form">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="name">Name:</label>
-                                <input type="text" id="name" name="name" value="{{ personal_info.name|default:'' }}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="address">Address:</label>
-                                <textarea id="address" name="address" rows="3" required>{{ personal_info.address|default:'' }}</textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="phone">Phone Number:</label>
-                                <input type="tel" id="phone" name="phone" value="{{ personal_info.phone|default:'' }}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="email">Email:</label>
-                                <input type="email" id="email" name="email" value="{{ personal_info.email|default:'' }}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="date_of_birth">Date of Birth:</label>
-                                <input type="date" id="date_of_birth" name="date_of_birth" value="{{ personal_info.date_of_birth|default:'' }}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="gender">Gender:</label>
-                                <select id="gender" name="gender" required>
-                                    <option value="">Select Gender</option>
-                                    <option value="M" {% if personal_info.gender == 'M' %}selected{% endif %}>Male</option>
-                                    <option value="F" {% if personal_info.gender == 'F' %}selected{% endif %}>Female</option>
-                                    <option value="O" {% if personal_info.gender == 'O' %}selected{% endif %}>Other</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn-primary">Save Information</button>
-                                <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
-                            </div>
-                        </form>
+            <!-- Page Header -->
+            <div style="margin-bottom: 2.5rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 700; color: #1e40af; margin: 0 0 0.5rem 0; letter-spacing: -0.02em;">Personal Information</h1>
+                <p style="font-size: 1.125rem; color: #475569; margin: 0;">Complete your profile to personalize your financial planning experience.</p>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card" style="padding: 2.5rem; border: 2px solid #e5e7eb; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
+                <div style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="width: 3.5rem; height: 3.5rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin: 0 0 0.25rem 0;">Personal Details</h2>
+                            <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">Your information is secure and private</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" class="personal-form">
+                    {% csrf_token %}
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Name Field -->
+                        <div class="form-group">
+                            <label for="name" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                Full Name
+                            </label>
+                            <input type="text" id="name" name="name" value="{{ personal_info.name|default:'' }}" required minlength="2" maxlength="100">
+                            <div class="field-error" id="name-error" style="display: none; color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;"></div>
+                        </div>
+
+                        <!-- Email Field -->
+                        <div class="form-group">
+                            <label for="email" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                                </svg>
+                                Email Address
+                            </label>
+                            <input type="email" id="email" name="email" value="{{ personal_info.email|default:'' }}" required maxlength="254">
+                            <div class="field-error" id="email-error" style="display: none; color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Phone Field -->
+                        <div class="form-group">
+                            <label for="phone" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                </svg>
+                                Phone Number
+                            </label>
+                            <input type="tel" id="phone" name="phone" value="{{ personal_info.phone|default:'' }}" required placeholder="(555) 123-4567">
+                            <div class="field-error" id="phone-error" style="display: none; color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;"></div>
+                        </div>
+
+                        <!-- Date of Birth Field -->
+                        <div class="form-group">
+                            <label for="date_of_birth" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                Date of Birth
+                            </label>
+                            <input type="date" id="date_of_birth" name="date_of_birth" value="{% if personal_info.date_of_birth %}{{ personal_info.date_of_birth|date:'Y-m-d' }}{% endif %}" required max="{% now 'Y-m-d' %}" min="1900-01-01">
+                            <div class="field-error" id="date_of_birth-error" style="display: none; color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Gender Field -->
+                        <div class="form-group">
+                            <label for="gender" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                                    <circle cx="12" cy="8" r="5"></circle>
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                </svg>
+                                Gender
+                            </label>
+                            <select id="gender" name="gender" required>
+                                <option value="">Select Gender</option>
+                                <option value="M" {% if personal_info.gender == 'M' %}selected{% endif %}>Male</option>
+                                <option value="F" {% if personal_info.gender == 'F' %}selected{% endif %}>Female</option>
+                                <option value="O" {% if personal_info.gender == 'O' %}selected{% endif %}>Other</option>
+                            </select>
+                            <div class="field-error" id="gender-error" style="display: none; color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;"></div>
+                        </div>
+
+                        <!-- Address Field (spans full width in next row) -->
+                        <div></div>
+                    </div>
+
+                    <!-- Address Field -->
+                    <div class="form-group" style="margin-bottom: 2rem;">
+                        <label for="address" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            Address
+                        </label>
+                            <textarea id="address" name="address" rows="3" required minlength="5">{{ personal_info.address|default:'' }}</textarea>
+                            <div class="field-error" id="address-error" style="display: none; color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;"></div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 2px solid #e5e7eb;">
+                        <a href="{% url 'financial_dashboard' %}" class="btn-secondary" style="padding: 0.875rem 2rem; text-decoration: none;">Cancel</a>
+                        <button type="submit" class="btn-primary btn-large" style="font-size: 1rem; padding: 0.875rem 2rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+                            Save Information
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: middle; margin-left: 0.5rem;">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Progress Indicator -->
+            <div style="margin-top: 3rem; padding: 1.5rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; border-radius: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 2.5rem; height: 2.5rem; background: #3b82f6; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 600; color: #1e40af; margin: 0 0 0.25rem 0;">Next Step</h3>
+                        <p style="font-size: 0.875rem; color: #475569; margin: 0;">
+                            Once you've saved your personal information, continue to Financial Info to add your income and spending preferences.
+                        </p>
+                        <a href="{% url 'financial_info' %}" style="display: inline-block; margin-top: 0.75rem; color: #3b82f6; font-weight: 600; text-decoration: none; font-size: 0.875rem;">
+                            Go to Financial Info →
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <style>
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="tel"],
+        .form-group input[type="date"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+            background: #ffffff;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group input:hover:not(:focus),
+        .form-group select:hover:not(:focus),
+        .form-group textarea:hover:not(:focus) {
+            border-color: #9ca3af;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5) !important;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary:hover {
+            background: #475569 !important;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .container > div:first-of-type > div {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Error states */
+        .form-group input:invalid:not(:placeholder-shown),
+        .form-group textarea:invalid:not(:placeholder-shown),
+        .form-group select:invalid {
+            border-color: #dc2626;
+        }
+
+        .form-group input:valid:not(:placeholder-shown),
+        .form-group textarea:valid:not(:placeholder-shown) {
+            border-color: #10b981;
+        }
+    </style>
+
+    <script>
+        // Real-time validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const nameField = document.getElementById('name');
+            const emailField = document.getElementById('email');
+            const phoneField = document.getElementById('phone');
+            const addressField = document.getElementById('address');
+            const dateField = document.getElementById('date_of_birth');
+            const genderField = document.getElementById('gender');
+            const form = document.querySelector('.personal-form');
+
+            // Name validation
+            nameField.addEventListener('blur', function() {
+                const name = this.value.trim();
+                const errorDiv = document.getElementById('name-error');
+                if (!name) {
+                    showError(nameField, errorDiv, 'Full name is required.');
+                } else if (name.length < 2) {
+                    showError(nameField, errorDiv, 'Full name must be at least 2 characters long.');
+                } else if (name.length > 100) {
+                    showError(nameField, errorDiv, 'Full name must be less than 100 characters.');
+                } else {
+                    clearError(nameField, errorDiv);
+                }
+            });
+
+            // Email validation
+            emailField.addEventListener('blur', function() {
+                const email = this.value.trim();
+                const errorDiv = document.getElementById('email-error');
+                const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!email) {
+                    showError(emailField, errorDiv, 'Email address is required.');
+                } else if (!emailPattern.test(email)) {
+                    showError(emailField, errorDiv, 'Please enter a valid email address (e.g., user@example.com).');
+                } else if (email.length > 254) {
+                    showError(emailField, errorDiv, 'Email address is too long.');
+                } else {
+                    clearError(emailField, errorDiv);
+                }
+            });
+
+            // Phone validation
+            phoneField.addEventListener('blur', function() {
+                const phone = this.value.trim();
+                const errorDiv = document.getElementById('phone-error');
+                if (!phone) {
+                    showError(phoneField, errorDiv, 'Phone number is required.');
+                } else {
+                    // Remove formatting characters
+                    const phoneDigits = phone.replace(/[\s\-\(\)\.]/g, '');
+                    const cleanDigits = phoneDigits.startsWith('+') ? phoneDigits.slice(1) : phoneDigits;
+                    if (!cleanDigits.match(/^\d+$/)) {
+                        showError(phoneField, errorDiv, 'Phone number must contain only digits.');
+                    } else if (cleanDigits.length < 10) {
+                        showError(phoneField, errorDiv, 'Phone number must be at least 10 digits long.');
+                    } else if (cleanDigits.length > 15) {
+                        showError(phoneField, errorDiv, 'Phone number is too long (maximum 15 digits).');
+                    } else {
+                        clearError(phoneField, errorDiv);
+                    }
+                }
+            });
+
+            // Address validation
+            addressField.addEventListener('blur', function() {
+                const address = this.value.trim();
+                const errorDiv = document.getElementById('address-error');
+                if (!address) {
+                    showError(addressField, errorDiv, 'Address is required.');
+                } else if (address.length < 5) {
+                    showError(addressField, errorDiv, 'Address must be at least 5 characters long.');
+                } else {
+                    clearError(addressField, errorDiv);
+                }
+            });
+
+            // Date validation
+            dateField.addEventListener('change', function() {
+                const dateValue = this.value;
+                const errorDiv = document.getElementById('date_of_birth-error');
+                if (!dateValue) {
+                    showError(dateField, errorDiv, 'Date of birth is required.');
+                } else {
+                    const selectedDate = new Date(dateValue);
+                    const today = new Date();
+                    const minDate = new Date('1900-01-01');
+                    if (selectedDate > today) {
+                        showError(dateField, errorDiv, 'Date of birth cannot be in the future.');
+                    } else if (selectedDate < minDate) {
+                        showError(dateField, errorDiv, 'Date of birth cannot be before 1900.');
+                    } else {
+                        clearError(dateField, errorDiv);
+                    }
+                }
+            });
+
+            // Gender validation
+            genderField.addEventListener('change', function() {
+                const errorDiv = document.getElementById('gender-error');
+                if (!this.value) {
+                    showError(genderField, errorDiv, 'Gender is required.');
+                } else {
+                    clearError(genderField, errorDiv);
+                }
+            });
+
+            // Form submission validation
+            form.addEventListener('submit', function(e) {
+                let hasErrors = false;
+
+                // Trigger validation for all fields
+                nameField.dispatchEvent(new Event('blur'));
+                emailField.dispatchEvent(new Event('blur'));
+                phoneField.dispatchEvent(new Event('blur'));
+                addressField.dispatchEvent(new Event('blur'));
+                dateField.dispatchEvent(new Event('change'));
+                genderField.dispatchEvent(new Event('change'));
+
+                // Check if any errors are visible
+                const errorDivs = document.querySelectorAll('.field-error');
+                errorDivs.forEach(function(errorDiv) {
+                    if (errorDiv.style.display !== 'none' && errorDiv.textContent.trim() !== '') {
+                        hasErrors = true;
+                    }
+                });
+
+                // Check basic required fields
+                if (!nameField.value.trim()) hasErrors = true;
+                if (!emailField.value.trim()) hasErrors = true;
+                if (!phoneField.value.trim()) hasErrors = true;
+                if (!addressField.value.trim()) hasErrors = true;
+                if (!dateField.value) hasErrors = true;
+                if (!genderField.value) hasErrors = true;
+
+                if (hasErrors) {
+                    e.preventDefault();
+                    // Scroll to first error
+                    const firstError = document.querySelector('.field-error[style*="block"], .field-error:not([style*="none"])');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstError.parentElement.querySelector('input, textarea, select')?.focus();
+                    }
+                }
+            });
+
+            function showError(field, errorDiv, message) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                field.style.borderColor = '#dc2626';
+            }
+
+            function clearError(field, errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+                if (field.value.trim()) {
+                    field.style.borderColor = '#10b981';
+                } else {
+                    field.style.borderColor = '#d1d5db';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
-

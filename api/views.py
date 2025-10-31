@@ -1,3 +1,6 @@
+import json
+import re
+from datetime import date, datetime
 from decimal import Decimal
 
 from django.contrib import messages
@@ -107,7 +110,7 @@ class SignUpView(CreateView):
 
 
 class FinancialDashboardView(LoginRequiredMixin, TemplateView):
-    template_name = "financial/dashboard.html"
+    template_name = "financial/welcome.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -146,12 +149,33 @@ class FinancialDashboardView(LoginRequiredMixin, TemplateView):
         except Exception:
             context["scenarios"] = []
 
+        # Add income entries for step completion check
         try:
             context["income_entries"] = IncomeEntry.objects.filter(user=user).order_by(
-                "-year"
-            )[:5]
+                "year"
+            )
+            context["has_income_entries"] = context["income_entries"].exists()
         except Exception:
             context["income_entries"] = []
+            context["has_income_entries"] = False
+
+        # Check if personal info is completed - user must have manually filled in name
+        # Name is the primary required field that user must enter manually
+        # Only check name field (email can be auto-filled from user account)
+        context["personal_info_complete"] = bool(
+            personal_info.name
+            and str(personal_info.name).strip()
+            and len(str(personal_info.name).strip()) > 0
+        )
+
+        # Check if results/projections exist
+        try:
+            context["has_results"] = (
+                IncomeEntry.objects.filter(user=user).exists()
+                and context["has_income_entries"]
+            )
+        except Exception:
+            context["has_results"] = False
 
         return context
 
@@ -163,25 +187,131 @@ class PersonalInformationView(LoginRequiredMixin, View):
         personal_info, created = PersonalInformation.objects.get_or_create(
             user=request.user
         )
-        return render(request, self.template_name, {"personal_info": personal_info})
+        # Auto-fill email from user account if personal_info email is empty
+        if not personal_info.email and request.user.email:
+            personal_info.email = request.user.email
+            personal_info.save()
+        return render(
+            request,
+            self.template_name,
+            {"personal_info": personal_info, "today": date.today()},
+        )
 
     def post(self, request):
         personal_info, created = PersonalInformation.objects.get_or_create(
             user=request.user
         )
 
-        personal_info.name = request.POST.get("name", "") or None
-        personal_info.address = request.POST.get("address", "") or None
-        personal_info.phone = request.POST.get("phone", "") or None
-        personal_info.email = request.POST.get("email", "") or None
+        # Validation errors list
+        errors = []
 
-        date_of_birth = request.POST.get("date_of_birth", "")
-        personal_info.date_of_birth = date_of_birth if date_of_birth else None
+        # Validate and process name
+        name = request.POST.get("name", "").strip()
+        if not name:
+            errors.append("Full name is required.")
+        elif len(name) < 2:
+            errors.append("Full name must be at least 2 characters long.")
+        elif len(name) > 100:
+            errors.append("Full name must be less than 100 characters.")
+        else:
+            personal_info.name = name
 
-        gender = request.POST.get("gender", "")
-        personal_info.gender = gender if gender else None
+        # Validate and process email
+        email = request.POST.get("email", "").strip()
+        if not email:
+            errors.append("Email address is required.")
+        else:
+            # Basic email format validation
+            email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+            if not re.match(email_pattern, email):
+                errors.append(
+                    "Please enter a valid email address (e.g., user@example.com)."
+                )
+            elif len(email) > 254:
+                errors.append("Email address is too long (maximum 254 characters).")
+            else:
+                personal_info.email = email
 
-        personal_info.save()
+        # Validate and process phone
+        phone = request.POST.get("phone", "").strip()
+        if not phone:
+            errors.append("Phone number is required.")
+        else:
+            # Remove common formatting characters for validation
+            phone_digits = re.sub(r"[\s\-\(\)\.]", "", phone)
+            # Check if phone contains only digits (and optional + at start)
+            if phone_digits.startswith("+"):
+                phone_digits = phone_digits[1:]
+            if not phone_digits.isdigit():
+                errors.append(
+                    "Phone number must contain only digits. You may use spaces, dashes, or parentheses for formatting."
+                )
+            elif len(phone_digits) < 10:
+                errors.append("Phone number must be at least 10 digits long.")
+            elif len(phone_digits) > 15:
+                errors.append("Phone number is too long (maximum 15 digits).")
+            else:
+                personal_info.phone = phone
+
+        # Validate and process address
+        address = request.POST.get("address", "").strip()
+        if not address:
+            errors.append("Address is required.")
+        elif len(address) < 5:
+            errors.append("Address must be at least 5 characters long.")
+        else:
+            personal_info.address = address
+
+        # Validate and process date_of_birth
+        date_of_birth_str = request.POST.get("date_of_birth", "").strip()
+        if not date_of_birth_str:
+            errors.append("Date of birth is required.")
+        else:
+            try:
+                parsed_date = datetime.strptime(date_of_birth_str, "%Y-%m-%d").date()
+                # Validate date is reasonable (not in future, not too old)
+                today = date.today()
+                if parsed_date > today:
+                    errors.append("Date of birth cannot be in the future.")
+                elif parsed_date.year < 1900:
+                    errors.append("Date of birth cannot be before 1900.")
+                elif (today - parsed_date).days > 365 * 150:  # Older than 150 years
+                    errors.append("Please enter a valid date of birth.")
+                else:
+                    personal_info.date_of_birth = parsed_date
+            except (ValueError, TypeError):
+                errors.append("Please enter a valid date of birth (YYYY-MM-DD format).")
+
+        # Validate and process gender
+        gender = request.POST.get("gender", "").strip()
+        if not gender:
+            errors.append("Gender is required.")
+        elif gender not in ["M", "F", "O"]:
+            errors.append("Please select a valid gender option.")
+        else:
+            personal_info.gender = gender
+
+        # If there are validation errors, show them and don't save
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return render(
+                request,
+                self.template_name,
+                {"personal_info": personal_info, "today": date.today()},
+            )
+
+        # All validation passed - save the model instance
+        personal_info.save(
+            update_fields=[
+                "name",
+                "address",
+                "phone",
+                "email",
+                "date_of_birth",
+                "gender",
+            ]
+        )
 
         messages.success(request, "Personal information updated successfully!")
         return redirect("personal_info")
@@ -268,6 +398,27 @@ class FinancialInformationView(LoginRequiredMixin, View):
                         }
                     )
 
+        # Format income entries for JavaScript display (same format as generate_results response)
+        entries_data = []
+        if income_entries.exists():
+            for entry in income_entries:
+                entries_data.append(
+                    {
+                        "year": entry.year,
+                        "income": float(entry.income_amount),
+                        "federal_tax": float(entry.federal_tax)
+                        if entry.federal_tax
+                        else 0,
+                        "state_tax": float(entry.state_tax) if entry.state_tax else 0,
+                        "total_tax": float(entry.total_tax) if entry.total_tax else 0,
+                        "after_tax_income": float(entry.after_tax_income)
+                        if entry.after_tax_income
+                        else float(entry.income_amount),
+                        "costs": float(entry.costs) if entry.costs else 0,
+                        "location": entry.location or "Unknown",
+                    }
+                )
+
         return render(
             request,
             self.template_name,
@@ -278,6 +429,9 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 "location_preferences": saved_locations,
                 "spending_preference": spending_preference,
                 "has_saved_data": has_saved_data,
+                "entries_data_json": json.dumps(
+                    entries_data
+                ),  # Serialized for JavaScript
             },
         )
 
@@ -320,15 +474,27 @@ class FinancialInformationView(LoginRequiredMixin, View):
 
                 final_rate = None
                 if const_flag and const_rate_val:
-                    final_rate = Decimal(const_rate_val)
+                    rate_value = float(const_rate_val)
+                    # Clamp to valid range for DecimalField(max_digits=5, decimal_places=2)
+                    rate_value = max(-999.99, min(999.99, rate_value))
+                    final_rate = Decimal(str(round(rate_value, 2)))
                 elif rate:
-                    final_rate = Decimal(rate)
+                    rate_value = float(rate)
+                    # Clamp to valid range for DecimalField(max_digits=5, decimal_places=2)
+                    rate_value = max(-999.99, min(999.99, rate_value))
+                    final_rate = Decimal(str(round(rate_value, 2)))
+
+                # Clamp income_amount to database constraints
+                income_clamped = max(
+                    Decimal("-9999999999.99"),
+                    min(Decimal("9999999999.99"), Decimal(inc)),
+                )
 
                 IncomeEntry.objects.update_or_create(
                     user=request.user,
                     year=year_i,
                     defaults={
-                        "income_amount": Decimal(inc),
+                        "income_amount": income_clamped,
                         "income_source": "Salary",
                         "savings_rate": final_rate,
                     },
@@ -665,19 +831,43 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 income_float = float(year_data["income"])  # Gross income before taxes
                 tax_info = calculate_total_tax(income_float, state_name)
 
+                # Clamp values to database field constraints
+                # income_amount: max_digits=12, decimal_places=2 -> max: 9999999999.99
+                income_value = Decimal(str(year_data["income"]))
+                max_income = Decimal("9999999999.99")
+                min_income = Decimal("-9999999999.99")
+                income_clamped = max(min_income, min(max_income, income_value))
+
+                # costs: max_digits=12, decimal_places=2 -> max: 9999999999.99
+                costs_value = Decimal(str(year_data["costs"]))
+                costs_clamped = max(min_income, min(max_income, costs_value))
+
+                # federal_tax, state_tax, total_tax, after_tax_income: max_digits=12, decimal_places=2
+                federal_tax_clamped = max(
+                    min_income, min(max_income, Decimal(str(tax_info["federal_tax"])))
+                )
+                state_tax_clamped = max(
+                    min_income, min(max_income, Decimal(str(tax_info["state_tax"])))
+                )
+                total_tax_clamped = max(
+                    min_income, min(max_income, Decimal(str(tax_info["total_tax"])))
+                )
+                after_tax_income_clamped = max(
+                    min_income,
+                    min(max_income, Decimal(str(tax_info["after_tax_income"]))),
+                )
+
                 # Costs are NOT taxed - they are separate expenses
                 IncomeEntry.objects.create(
                     user=request.user,
                     year=year_data["year"],
-                    income_amount=year_data["income"],  # Gross income
-                    costs=year_data["costs"],  # Costs (not taxed)
+                    income_amount=income_clamped,  # Gross income (clamped)
+                    costs=costs_clamped,  # Costs (not taxed, clamped)
                     location=year_data["location"],
-                    federal_tax=Decimal(str(tax_info["federal_tax"])),
-                    state_tax=Decimal(str(tax_info["state_tax"])),
-                    total_tax=Decimal(str(tax_info["total_tax"])),
-                    after_tax_income=Decimal(
-                        str(tax_info["after_tax_income"])
-                    ),  # Income after taxes
+                    federal_tax=federal_tax_clamped,
+                    state_tax=state_tax_clamped,
+                    total_tax=total_tax_clamped,
+                    after_tax_income=after_tax_income_clamped,  # Income after taxes (clamped)
                     savings_rate=0,  # Will be calculated later
                 )
 
@@ -750,22 +940,51 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     income_float = float(income)
                     tax_info = calculate_total_tax(income_float, state_name)
 
+                    # Clamp values to database field constraints
+                    # income_amount, costs: max_digits=12, decimal_places=2 -> max: 9999999999.99
+                    max_value = Decimal("9999999999.99")
+                    min_value = Decimal("-9999999999.99")
+
+                    income_clamped = max(
+                        min_value, min(max_value, Decimal(str(income)))
+                    )
+                    costs_clamped = max(min_value, min(max_value, Decimal(str(costs))))
+                    federal_tax_clamped = max(
+                        min_value, min(max_value, Decimal(str(tax_info["federal_tax"])))
+                    )
+                    state_tax_clamped = max(
+                        min_value, min(max_value, Decimal(str(tax_info["state_tax"])))
+                    )
+                    total_tax_clamped = max(
+                        min_value, min(max_value, Decimal(str(tax_info["total_tax"])))
+                    )
+                    after_tax_income_clamped = max(
+                        min_value,
+                        min(max_value, Decimal(str(tax_info["after_tax_income"]))),
+                    )
+
                     # Update entry
-                    entry.income_amount = Decimal(str(income))
-                    entry.costs = Decimal(str(costs))
-                    entry.federal_tax = Decimal(str(tax_info["federal_tax"]))
-                    entry.state_tax = Decimal(str(tax_info["state_tax"]))
-                    entry.total_tax = Decimal(str(tax_info["total_tax"]))
-                    entry.after_tax_income = Decimal(str(tax_info["after_tax_income"]))
+                    entry.income_amount = income_clamped
+                    entry.costs = costs_clamped
+                    entry.federal_tax = federal_tax_clamped
+                    entry.state_tax = state_tax_clamped
+                    entry.total_tax = total_tax_clamped
+                    entry.after_tax_income = after_tax_income_clamped
 
                     # Recalculate savings rate
                     net_savings = entry.after_tax_income - entry.costs
                     if entry.after_tax_income > 0:
-                        entry.savings_rate = (
+                        savings_rate_value = (
                             net_savings / entry.after_tax_income
                         ) * 100
+                        # Clamp to valid range for DecimalField(max_digits=5, decimal_places=2)
+                        # Range: -999.99 to 999.99
+                        savings_rate_value = max(
+                            -999.99, min(999.99, savings_rate_value)
+                        )
+                        entry.savings_rate = Decimal(str(round(savings_rate_value, 2)))
                     else:
-                        entry.savings_rate = 0
+                        entry.savings_rate = Decimal("0.00")
 
                     entry.save()
 
@@ -821,12 +1040,24 @@ class FinancialInformationView(LoginRequiredMixin, View):
             IncomeEntry.objects.filter(user=request.user).delete()
 
             # Create new income entries
+            max_value = Decimal("9999999999.99")
+            min_value = Decimal("-9999999999.99")
             for i, (year, income, cost) in enumerate(zip(years, incomes, costs)):
+                # Clamp values to database constraints
+                income_clamped = max(
+                    min_value,
+                    min(max_value, Decimal(str(income)) if income else Decimal("0")),
+                )
+                costs_clamped = max(
+                    min_value,
+                    min(max_value, Decimal(str(cost)) if cost else Decimal("0")),
+                )
+
                 IncomeEntry.objects.create(
                     user=request.user,
                     year=int(year),
-                    income_amount=float(income) if income else 0,
-                    costs=float(cost) if cost else 0,
+                    income_amount=income_clamped,
+                    costs=costs_clamped,
                     savings_rate=0,  # Will be calculated later
                 )
 
@@ -938,11 +1169,17 @@ class IncomeTimelineView(LoginRequiredMixin, View):
         income_source = request.POST.get("income_source", "Salary")
 
         if year and income_amount:
+            # Clamp income_amount to database constraints
+            income_clamped = max(
+                Decimal("-9999999999.99"),
+                min(Decimal("9999999999.99"), Decimal(income_amount)),
+            )
+
             IncomeEntry.objects.update_or_create(
                 user=request.user,
                 year=int(year),
                 defaults={
-                    "income_amount": Decimal(income_amount),
+                    "income_amount": income_clamped,
                     "income_source": income_source,
                 },
             )
