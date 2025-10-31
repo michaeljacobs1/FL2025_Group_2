@@ -25,12 +25,7 @@
     </nav>
 
     <main class="main-content">
-        <div class="container">
-            <div class="welcome-section">
-                <h2>Welcome, {{ user.username }}!</h2>
-                <p>Your financial planning journey starts here.</p>
-            </div>
-
+        <div class="dashboard-container">
             {% if messages %}
                 <div class="messages">
                     {% for message in messages %}
@@ -39,57 +34,204 @@
                 </div>
             {% endif %}
 
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h3>Personal Information</h3>
-                    <div class="card-content">
+            <div class="dashboard-header">
+                <div class="dashboard-title-section">
+                    <h1 class="dashboard-title">Dashboard</h1>
+                    <p class="dashboard-subtitle">Welcome back, {{ user.username }}</p>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-label">Profile Status</span>
                         {% if personal_info.name %}
-                            <p><strong>Name:</strong> {{ personal_info.name }}</p>
-                            <p><strong>Email:</strong> {{ personal_info.email|default:"Not provided" }}</p>
-                            <p><strong>Phone:</strong> {{ personal_info.phone|default:"Not provided" }}</p>
-                            <div class="status-indicator completed">✓ Completed</div>
+                            <span class="stat-badge stat-badge-success">Complete</span>
                         {% else %}
-                            <p>Personal information not yet provided.</p>
-                            <div class="status-indicator pending">⚠ Pending</div>
+                            <span class="stat-badge stat-badge-warning">Incomplete</span>
                         {% endif %}
-                        <a href="{% url 'personal_info' %}" class="action-btn">{% if personal_info.name %}Edit{% else %}Complete{% endif %}</a>
                     </div>
-                </div>
-
-                <div class="card">
-                    <h3>Financial Information</h3>
-                    <div class="card-content">
-                        {% if financial_profile.monthly_income %}
-                            <p><strong>Monthly Income:</strong> ${{ financial_profile.monthly_income|floatformat:2 }}</p>
-                            <p><strong>Savings Rate:</strong> {{ financial_profile.current_savings_rate|default:"Not set" }}%</p>
-                            <div class="status-indicator completed">✓ Completed</div>
-                        {% else %}
-                            <p>Financial information not yet provided.</p>
-                            <div class="status-indicator pending">⚠ Pending</div>
-                        {% endif %}
-                        <a href="{% url 'financial_info' %}" class="action-btn">{% if financial_profile.monthly_income > 0 %}Edit{% else %}Complete{% endif %}</a>
-                    </div>
-                </div>
-
-
-                <div class="card">
-                    <h3>Projections & Results</h3>
-                    <div class="card-content">
-                        <p>View your financial projections and investment results.</p>
-                        <div class="status-indicator {% if recent_projections %}completed{% else %}pending{% endif %}">
-                            {% if recent_projections %}✓ {{ recent_projections|length }} projections{% else %}⚠ No projections{% endif %}
+                    <div class="stat-card-body">
+                        <div class="stat-value">
+                            {% if personal_info.name %}
+                                <span class="stat-main">{{ personal_info.name|truncatewords:2 }}</span>
+                            {% else %}
+                                <span class="stat-main">Not Set</span>
+                            {% endif %}
                         </div>
-                        <a href="{% url 'results' %}" class="action-btn">View Results</a>
+                        <div class="stat-meta">
+                            {% if personal_info.email %}{{ personal_info.email }}{% else %}No email{% endif %}
+                        </div>
+                    </div>
+                    <div class="stat-card-footer">
+                        <a href="{% url 'personal_info' %}" class="stat-link">{% if personal_info.name %}Update Profile{% else %}Complete Profile{% endif %} →</a>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-label">Financial Data</span>
+                        {% if income_entries %}
+                            <span class="stat-badge stat-badge-success">Active</span>
+                        {% else %}
+                            <span class="stat-badge stat-badge-warning">Pending</span>
+                        {% endif %}
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-value">
+                            {% if income_entries %}
+                                <span class="stat-main">{{ income_entries|length }}</span>
+                                <span class="stat-unit">year{{ income_entries|length|pluralize }}</span>
+                            {% else %}
+                                <span class="stat-main">No Data</span>
+                            {% endif %}
+                        </div>
+                        <div class="stat-meta">
+                            {% if financial_profile.monthly_income %}
+                                ${{ financial_profile.monthly_income|floatformat:0 }}/mo
+                            {% else %}
+                                No income data
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="stat-card-footer">
+                        <a href="{% url 'financial_info' %}" class="stat-link">{% if income_entries %}Update Data{% else %}Add Financial Data{% endif %} →</a>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-label">Projections</span>
+                        {% if recent_projections %}
+                            <span class="stat-badge stat-badge-success">Available</span>
+                        {% else %}
+                            <span class="stat-badge stat-badge-neutral">None</span>
+                        {% endif %}
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-value">
+                            {% if recent_projections %}
+                                <span class="stat-main">{{ recent_projections|length }}</span>
+                                <span class="stat-unit">active</span>
+                            {% else %}
+                                <span class="stat-main">0</span>
+                            {% endif %}
+                        </div>
+                        <div class="stat-meta">
+                            {% if income_entries %}Ready to view{% else %}Complete setup first{% endif %}
+                        </div>
+                    </div>
+                    <div class="stat-card-footer">
+                        <a href="{% url 'results' %}" class="stat-link">View Projections →</a>
                     </div>
                 </div>
             </div>
 
-            <div class="quick-actions">
-                <h3>Quick Actions</h3>
-                <div class="action-buttons">
-                    <a href="{% url 'personal_info' %}" class="btn-primary">Complete Personal Info</a>
-                    <a href="{% url 'financial_info' %}" class="btn-primary">Add Financial Data</a>
-                    <a href="{% url 'results' %}" class="btn-secondary">Run Projections</a>
+            <!-- Main Content Grid -->
+            <div class="dashboard-content-grid">
+                <!-- Personal Information Card -->
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Personal Information</h2>
+                        <a href="{% url 'personal_info' %}" class="content-card-link">Manage →</a>
+                    </div>
+                    <div class="content-card-body">
+                        {% if personal_info.name %}
+                            <div class="info-row">
+                                <span class="info-key">Full Name</span>
+                                <span class="info-value">{{ personal_info.name }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-key">Email Address</span>
+                                <span class="info-value">{{ personal_info.email|default:"Not provided" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-key">Phone Number</span>
+                                <span class="info-value">{{ personal_info.phone|default:"Not provided" }}</span>
+                            </div>
+                        {% else %}
+                            <div class="empty-state-content">
+                                <p>No personal information has been added yet.</p>
+                                <a href="{% url 'personal_info' %}" class="btn-primary">Add Personal Information</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Financial Information Card -->
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Financial Overview</h2>
+                        <a href="{% url 'financial_info' %}" class="content-card-link">Manage →</a>
+                    </div>
+                    <div class="content-card-body">
+                        {% if income_entries %}
+                            <div class="info-row">
+                                <span class="info-key">Income Years</span>
+                                <span class="info-value">{{ income_entries|length }} year{{ income_entries|length|pluralize }} entered</span>
+                            </div>
+                            {% if financial_profile.monthly_income %}
+                                <div class="info-row">
+                                    <span class="info-key">Monthly Income</span>
+                                    <span class="info-value">${{ financial_profile.monthly_income|floatformat:2 }}</span>
+                                </div>
+                            {% endif %}
+                            {% if financial_profile.current_savings_rate %}
+                                <div class="info-row">
+                                    <span class="info-key">Savings Rate</span>
+                                    <span class="info-value">{{ financial_profile.current_savings_rate }}%</span>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="empty-state-content">
+                                <p>No financial data has been entered yet.</p>
+                                <a href="{% url 'financial_info' %}" class="btn-primary">Add Financial Data</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions-section">
+                <h2 class="section-title">Quick Actions</h2>
+                <div class="quick-actions-grid">
+                    <a href="{% url 'personal_info' %}" class="quick-action-item">
+                        <div class="quick-action-icon-wrapper">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <div class="quick-action-text">
+                            <span class="quick-action-title">Personal Info</span>
+                            <span class="quick-action-desc">Update your profile details</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'financial_info' %}" class="quick-action-item">
+                        <div class="quick-action-icon-wrapper">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </div>
+                        <div class="quick-action-text">
+                            <span class="quick-action-title">Financial Info</span>
+                            <span class="quick-action-desc">Add income and spending data</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'results' %}" class="quick-action-item">
+                        <div class="quick-action-icon-wrapper">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="quick-action-text">
+                            <span class="quick-action-title">View Results</span>
+                            <span class="quick-action-desc">See your projections</span>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>

@@ -50,6 +50,34 @@ class IncomeEntry(models.Model):
     savings_rate = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True
     )
+    federal_tax = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Federal income tax",
+    )
+    state_tax = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="State income tax",
+    )
+    total_tax = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Total income tax (federal + state)",
+    )
+    after_tax_income = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Income after taxes",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
