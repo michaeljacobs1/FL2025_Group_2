@@ -249,9 +249,7 @@
 
         })();
 
-            // Income vs Costs Chart with Location Segments
-            // IMPORTANT: Costs are NOT adjusted by taxes - they are displayed as-is
-            // Costs increase by 3% annually due to inflation
+           
             {% if income_entries %}
             const incomeData = [
                 {% for entry in income_entries %}
@@ -280,8 +278,8 @@
 
             // Create datasets - one for each location
             const datasets = [];
-            const incomeColor = '#3b82f6'; // Blue for income
-            const costsColor = '#ef4444';  // Red for costs
+            const incomeColor = '#3b82f6'; 
+            const costsColor = '#ef4444';  
 
             sortedLocations.forEach((location, index) => {
                 const group = locationGroups[location];
@@ -360,7 +358,6 @@
                                         const entry = incomeData[context.dataIndex];
                                         const location = entry.location;
                                         
-                                        // If this is a costs dataset, costs are NOT adjusted by taxes
                                         if (context.dataset.label.includes('Costs')) {
                                             return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
                                         } else {
@@ -410,29 +407,23 @@
                 }
             }
 
-            // Net Worth Projection Chart
-            // Calculate net worth series with varying annual returns that maintain target CAGR
-            // Generate random annual returns that have a geometric mean equal to the target CAGR
             function generateVaryingReturns(numYears, targetCAGR, variationRange = 0.10) {
-                // variationRange: how much the returns can vary (e.g., 0.10 = ±10% variation)
-                const returns = [];
                 
-                // Generate random returns centered around target CAGR with variation
-                // Use normal distribution-like approach with bounds
+                const returns = [];
+                              
                 for (let i = 0; i < numYears; i++) {
-                    // Generate random variation (uniform distribution, can adjust for normal distribution)
+                    
                     const variation = (Math.random() - 0.5) * variationRange;
                     const annualReturn = targetCAGR + variation;
-                    // Ensure returns are reasonable (not too negative)
-                    returns.push(Math.max(annualReturn, -0.30)); // Cap at -30% minimum
+                    
+                    returns.push(Math.max(annualReturn, -0.30));
                 }
                 
                 // Calculate geometric mean of generated returns
                 const product = returns.reduce((acc, r) => acc * (1 + r), 1);
                 const actualCAGR = Math.pow(product, 1 / numYears) - 1;
                 
-                // Adjust returns to ensure geometric mean equals target CAGR
-                // We need: (1+r1)*(1+r2)*...*(1+rn) = (1+targetCAGR)^n
+             
                 // So: (1+ri_adjusted) = (1+ri) * ((1+targetCAGR)/(1+actualCAGR))
                 const adjustmentFactor = (1 + targetCAGR) / (1 + actualCAGR);
                 const adjustedReturns = returns.map(r => ((1 + r) * adjustmentFactor) - 1);
@@ -452,11 +443,11 @@
                 const annualReturns = generateVaryingReturns(savings.length, targetCAGR);
                 
                 for (let i = 0; i < savings.length; i++) {
-                    // For first year, just set net worth to net savings
+                    
                     if (i === 0) {
                         currentNetWorth = savings[i];
                     } else {
-                        // For subsequent years: grow previous net worth by varying return rate, then add new savings
+                        
                         currentNetWorth = (currentNetWorth * (1 + annualReturns[i])) + savings[i];
                     }
                     netWorthSeries.push(currentNetWorth);
@@ -465,13 +456,13 @@
                 return { netWorth: netWorthSeries, returns: annualReturns };
             }
 
-            const netSavings = savings; // Net savings per year (income - costs)
+            const netSavings = savings; 
             const yearsLabels = years.map(y => String(y));
 
             // Calculate net worth for each scenario with varying returns
-            const aggressiveResult = calculateNetWorth(netSavings, 0.10); // 10% CAGR
-            const moderateResult = calculateNetWorth(netSavings, 0.07);  // 7% CAGR
-            const conservativeResult = calculateNetWorth(netSavings, 0.04); // 4% CAGR
+            const aggressiveResult = calculateNetWorth(netSavings, 0.10); 
+            const moderateResult = calculateNetWorth(netSavings, 0.07);  
+            const conservativeResult = calculateNetWorth(netSavings, 0.04); 
             
             const aggressiveNetWorth = aggressiveResult.netWorth;
             const moderateNetWorth = moderateResult.netWorth;
@@ -488,7 +479,7 @@
                             {
                                 label: 'Aggressive (10% annual return)',
                                 data: aggressiveNetWorth,
-                                borderColor: '#10b981', // Green for aggressive
+                                borderColor: '#10b981', 
                                 backgroundColor: '#10b98120',
                                 borderWidth: 3,
                                 fill: false,
@@ -499,7 +490,7 @@
                             {
                                 label: 'Moderate (7% annual return)',
                                 data: moderateNetWorth,
-                                borderColor: '#3b82f6', // Blue for moderate
+                                borderColor: '#3b82f6', 
                                 backgroundColor: '#3b82f620',
                                 borderWidth: 3,
                                 fill: false,
@@ -510,7 +501,7 @@
                             {
                                 label: 'Conservative (4% annual return)',
                                 data: conservativeNetWorth,
-                                borderColor: '#f59e0b', // Orange/amber for conservative
+                                borderColor: '#f59e0b', 
                                 backgroundColor: '#f59e0b20',
                                 borderWidth: 3,
                             fill: false,

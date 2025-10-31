@@ -303,7 +303,7 @@
                 if (!phone) {
                     showError(phoneField, errorDiv, 'Phone number is required.');
                 } else {
-                    // Remove formatting characters
+                    
                     const phoneDigits = phone.replace(/[\s\-\(\)\.]/g, '');
                     const cleanDigits = phoneDigits.startsWith('+') ? phoneDigits.slice(1) : phoneDigits;
                     if (!cleanDigits.match(/^\d+$/)) {
