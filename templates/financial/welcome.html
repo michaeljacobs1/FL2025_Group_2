@@ -16,6 +16,7 @@
                 <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
                 <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
                 <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link">Monte Carlo</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn">Logout</button>

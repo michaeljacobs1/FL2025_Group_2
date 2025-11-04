@@ -85,26 +85,26 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # --- USE SQLITE LOCALLY ---
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
-
-# --- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "mydatabase",
-        "USER": "myuser",
-        "PASSWORD": "mypassword",
-        "HOST": "db",
-        # "HOST": "127.0.0.1",
-        "PORT": "3306",
-        "OPTIONS": {"charset": "utf8mb4"},
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# --- ORIGINAL MYSQL CONFIG (COMMENTED OUT, PRESERVED) ---
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.mysql",
+#         "NAME": "mydatabase",
+#         "USER": "myuser",
+#         "PASSWORD": "mypassword",
+#         "HOST": "db",
+#         # "HOST": "127.0.0.1",
+#         "PORT": "3306",
+#         "OPTIONS": {"charset": "utf8mb4"},
+#     }
+# }
 
 
 # Password validation
@@ -140,7 +140,7 @@ DEFAULT_FROM_EMAIL = "Financial Planner <financialplannerreset@gmail.com>"
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/Chicago"
 
 USE_I18N = True
 

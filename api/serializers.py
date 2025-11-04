@@ -5,6 +5,8 @@ from .models import (
     AICostEstimate,
     FinancialProfile,
     IncomeEntry,
+    MonteCarloIteration,
+    MonteCarloSimulation,
     PersonalInformation,
     Post,
     ProjectionResult,
@@ -79,4 +81,34 @@ class AICostEstimateSerializer(serializers.ModelSerializer):
             "ai_response_raw",
             "ai_model_used",
             "confidence_score",
+        ]
+
+
+class MonteCarloIterationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MonteCarloIteration
+        fields = "__all__"
+
+
+class MonteCarloSimulationSerializer(serializers.ModelSerializer):
+    scenario = ProjectionScenarioSerializer(read_only=True)
+    iterations = MonteCarloIterationSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = MonteCarloSimulation
+        fields = "__all__"
+        read_only_fields = [
+            "user",
+            "created_at",
+            "updated_at",
+            "mean_final_value",
+            "median_final_value",
+            "std_dev_final_value",
+            "min_final_value",
+            "max_final_value",
+            "percentile_5",
+            "percentile_25",
+            "percentile_75",
+            "percentile_95",
+            "success_rate",
         ]

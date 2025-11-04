@@ -8,6 +8,9 @@ from .views import (
     FinancialProfileViewSet,
     IncomeEntryViewSet,
     IncomeTimelineView,
+    MonteCarloSimulationDetailView,
+    MonteCarloSimulationView,
+    MonteCarloSimulationViewSet,
     PersonalInformationView,
     PersonalInformationViewSet,
     PostViewSet,
@@ -27,6 +30,7 @@ router.register("projection-results", ProjectionResultViewSet)
 router.register("income-entries", IncomeEntryViewSet)
 router.register("personal-information", PersonalInformationViewSet)
 router.register("ai-cost-estimates", AICostEstimateViewSet)
+router.register("monte-carlo-simulations", MonteCarloSimulationViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
@@ -46,5 +50,15 @@ urlpatterns = [
         "scenario-comparison/",
         ScenarioComparisonView.as_view(),
         name="scenario_comparison",
+    ),
+    path(
+        "monte-carlo/",
+        MonteCarloSimulationView.as_view(),
+        name="monte_carlo_simulation",
+    ),
+    path(
+        "monte-carlo/<int:simulation_id>/",
+        MonteCarloSimulationDetailView.as_view(),
+        name="monte_carlo_simulation_detail",
     ),
 ]

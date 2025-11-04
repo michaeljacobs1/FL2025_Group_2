@@ -3,8 +3,8 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 
+from accounts.forms import SignupForm
 from django.contrib import messages
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -18,6 +18,7 @@ from .models import (
     FinancialProfile,
     IncomeEntry,
     LocationPreference,
+    MonteCarloSimulation,
     PersonalInformation,
     Post,
     ProjectionResult,
@@ -25,11 +26,12 @@ from .models import (
     ProjectionYearlyData,
     SpendingPreference,
 )
-from .projection_service import ProjectionCalculator
+from .projection_service import MonteCarloService, ProjectionCalculator
 from .serializers import (
     AICostEstimateSerializer,
     FinancialProfileSerializer,
     IncomeEntrySerializer,
+    MonteCarloSimulationSerializer,
     PersonalInformationSerializer,
     PostSerializer,
     ProjectionResultSerializer,
@@ -91,6 +93,18 @@ class IncomeEntryViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
+class MonteCarloSimulationViewSet(viewsets.ModelViewSet):
+    queryset = MonteCarloSimulation.objects.all()
+    serializer_class = MonteCarloSimulationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return MonteCarloSimulation.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
 class PersonalInformationViewSet(viewsets.ModelViewSet):
     queryset = PersonalInformation.objects.all()
     serializer_class = PersonalInformationSerializer
@@ -104,7 +118,7 @@ class PersonalInformationViewSet(viewsets.ModelViewSet):
 
 
 class SignUpView(CreateView):
-    form_class = UserCreationForm
+    form_class = SignupForm
     template_name = "registration/signup.html"
     success_url = reverse_lazy("login")
 
@@ -1352,6 +1366,148 @@ class ScenarioComparisonView(LoginRequiredMixin, View):
         except Exception as e:
             messages.error(request, f"Error comparing scenarios: {str(e)}")
             return redirect("scenario_comparison")
+
+
+class MonteCarloSimulationView(LoginRequiredMixin, View):
+    """View for running and listing Monte Carlo simulations"""
+
+    template_name = "financial/monte_carlo_simulation.html"
+
+    def get(self, request):
+        user = request.user
+
+        # Ensure user has scenarios (create default ones if they don't exist)
+        from api.projection_service import ProjectionCalculator
+
+        calculator = ProjectionCalculator(user)
+        if not ProjectionScenario.objects.filter(user=user).exists():
+            calculator.create_default_scenarios()
+
+        scenarios = ProjectionScenario.objects.filter(user=user).order_by("id")
+        simulations = MonteCarloSimulation.objects.filter(user=user).order_by(
+            "-created_at"
+        )[:10]
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "scenarios": scenarios,
+                "simulations": simulations,
+            },
+        )
+
+    def post(self, request):
+        user = request.user
+
+        # Get parameters from POST data
+        scenario_id = request.POST.get("scenario_id")
+        projected_years = request.POST.get("projected_years", "30")
+        number_of_iterations = request.POST.get("number_of_iterations", "1000")
+        target_goal = request.POST.get("target_goal", "")
+        store_iterations = request.POST.get("store_iterations") == "on"
+
+        # Custom parameters (optional, override scenario)
+        base_return_rate = request.POST.get("base_return_rate", "")
+        return_rate_std_dev = request.POST.get("return_rate_std_dev", "")
+        base_inflation_rate = request.POST.get("base_inflation_rate", "")
+        inflation_rate_std_dev = request.POST.get("inflation_rate_std_dev", "")
+
+        # Validation
+        if not scenario_id and not base_return_rate:
+            messages.error(
+                request, "Please select a scenario or provide a base return rate."
+            )
+            return redirect("monte_carlo_simulation")
+
+        try:
+            projected_years = int(projected_years)
+            number_of_iterations = int(number_of_iterations)
+
+            if number_of_iterations < 100 or number_of_iterations > 10000:
+                messages.error(
+                    request,
+                    "Number of iterations must be between 100 and 10000.",
+                )
+                return redirect("monte_carlo_simulation")
+        except ValueError:
+            messages.error(request, "Invalid number format.")
+            return redirect("monte_carlo_simulation")
+
+        # Prepare parameters
+        scenario_id_int = int(scenario_id) if scenario_id else None
+        target_goal_decimal = Decimal(target_goal) if target_goal else None
+        base_return_rate_decimal = (
+            Decimal(base_return_rate) if base_return_rate else None
+        )
+        return_rate_std_dev_decimal = (
+            Decimal(return_rate_std_dev) if return_rate_std_dev else None
+        )
+        base_inflation_rate_decimal = (
+            Decimal(base_inflation_rate) if base_inflation_rate else None
+        )
+        inflation_rate_std_dev_decimal = (
+            Decimal(inflation_rate_std_dev) if inflation_rate_std_dev else None
+        )
+
+        try:
+            service = MonteCarloService(user)
+            simulation = service.run_simulation(
+                scenario_id=scenario_id_int,
+                projected_years=projected_years,
+                number_of_iterations=number_of_iterations,
+                base_return_rate=base_return_rate_decimal,
+                return_rate_std_dev=return_rate_std_dev_decimal,
+                base_inflation_rate=base_inflation_rate_decimal,
+                inflation_rate_std_dev=inflation_rate_std_dev_decimal,
+                target_goal=target_goal_decimal,
+                store_iterations=store_iterations,
+            )
+            messages.success(
+                request,
+                f"Monte Carlo simulation completed successfully! "
+                f"Mean final value: ${simulation.mean_final_value:,.2f}",
+            )
+            return redirect(
+                "monte_carlo_simulation_detail", simulation_id=simulation.id
+            )
+        except ValueError as e:
+            messages.error(request, f"Error: {str(e)}")
+            return redirect("monte_carlo_simulation")
+        except Exception as e:
+            messages.error(request, f"Error running simulation: {str(e)}")
+            return redirect("monte_carlo_simulation")
+
+
+class MonteCarloSimulationDetailView(LoginRequiredMixin, View):
+    """View for displaying detailed Monte Carlo simulation results"""
+
+    template_name = "financial/monte_carlo_detail.html"
+
+    def get(self, request, simulation_id):
+        user = request.user
+
+        try:
+            simulation = MonteCarloSimulation.objects.get(id=simulation_id, user=user)
+        except MonteCarloSimulation.DoesNotExist:
+            messages.error(request, "Simulation not found.")
+            return redirect("monte_carlo_simulation")
+
+        # Get iterations if stored
+        iterations = (
+            simulation.iterations.all().order_by("iteration_number")
+            if hasattr(simulation, "iterations")
+            else []
+        )
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "simulation": simulation,
+                "iterations": iterations,
+            },
+        )
 
 
 class AICostEstimateViewSet(viewsets.ModelViewSet):
