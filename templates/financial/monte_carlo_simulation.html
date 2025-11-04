@@ -1,0 +1,182 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monte Carlo Simulation - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link active">Monte Carlo</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Monte Carlo Simulation</h2>
+                <p>Run Monte Carlo simulations to see probability distributions of your investment outcomes based on varying returns and inflation.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Run New Simulation</h3>
+                </div>
+                <div class="card-content">
+                    <form method="post" class="monte-carlo-form">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="scenario_id">Select Scenario (or use custom parameters below):</label>
+                            <select id="scenario_id" name="scenario_id" class="form-control">
+                                <option value="">-- Select Scenario --</option>
+                                {% for scenario in scenarios %}
+                                <option value="{{ scenario.id }}">
+                                    {{ scenario.name }} ({{ scenario.annual_return_rate }}% return, {{ scenario.risk_tolerance }} risk)
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text">Optional: Select a scenario to use its parameters as defaults</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="projected_years">Projected Years:</label>
+                                <input type="number" id="projected_years" name="projected_years" 
+                                       value="30" min="1" max="50" required class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="number_of_iterations">Number of Iterations:</label>
+                                <input type="number" id="number_of_iterations" name="number_of_iterations" 
+                                       value="1000" min="100" max="10000" step="100" required class="form-control">
+                                <small class="form-text">More iterations = more accurate but slower (1000-5000 recommended)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="target_goal">Target Portfolio Value (Optional):</label>
+                            <input type="number" id="target_goal" name="target_goal" 
+                                   placeholder="e.g., 1000000" step="1000" class="form-control">
+                            <small class="form-text">The dollar amount you want to reach (e.g., $1,000,000 for retirement). If provided, the simulation will calculate the probability of reaching this goal.</small>
+                        </div>
+
+                        <div class="form-divider">
+                            <h4>Custom Parameters (Optional - Overrides scenario)</h4>
+                            <p class="form-text">Leave blank to use scenario defaults</p>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="base_return_rate">Expected Annual Return Rate (%):</label>
+                                <input type="number" id="base_return_rate" name="base_return_rate" 
+                                       step="0.1" class="form-control" placeholder="e.g., 7.0">
+                                <small class="form-text">Your expected average annual investment return. Conservative: 4-5%, Moderate: 6-8%, Aggressive: 9-11%</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="return_rate_std_dev">Return Volatility / Risk (%):</label>
+                                <input type="number" id="return_rate_std_dev" name="return_rate_std_dev" 
+                                       step="0.1" class="form-control" placeholder="e.g., 14.0">
+                                <small class="form-text">How much your returns vary year-to-year (standard deviation). Low risk: 8-10%, Medium: 12-16%, High: 18-22%</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="base_inflation_rate">Expected Annual Inflation Rate (%):</label>
+                                <input type="number" id="base_inflation_rate" name="base_inflation_rate" 
+                                       step="0.1" class="form-control" placeholder="e.g., 3.0">
+                                <small class="form-text">Expected average annual inflation. Historical average: 2-3%. Current typical range: 2.5-3.5%</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="inflation_rate_std_dev">Inflation Volatility (%):</label>
+                                <input type="number" id="inflation_rate_std_dev" name="inflation_rate_std_dev" 
+                                       step="0.1" class="form-control" placeholder="e.g., 1.0">
+                                <small class="form-text">How much inflation varies year-to-year. Typical range: 0.5-2.0%. Lower values = more stable economy</small>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Run Monte Carlo Simulation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if simulations %}
+            <div class="card form-card" style="margin-top: 2rem;">
+                <div class="card-header">
+                    <h3>Recent Simulations</h3>
+                </div>
+                <div class="card-content">
+                    <div class="table-responsive">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Scenario</th>
+                                    <th>Years</th>
+                                    <th>Iterations</th>
+                                    <th>Mean Value</th>
+                                    <th>Median Value</th>
+                                    <th>5th %ile</th>
+                                    <th>95th %ile</th>
+                                    <th>Success Rate</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for simulation in simulations %}
+                                <tr>
+                                    <td>{{ simulation.created_at|date:"M d, Y g:i A" }}</td>
+                                    <td>{{ simulation.scenario.name|default:"Custom" }}</td>
+                                    <td>{{ simulation.projected_years }}</td>
+                                    <td>{{ simulation.number_of_iterations|floatformat:0 }}</td>
+                                    <td>${{ simulation.mean_final_value|floatformat:0 }}</td>
+                                    <td>${{ simulation.median_final_value|floatformat:0 }}</td>
+                                    <td>${{ simulation.percentile_5|floatformat:0 }}</td>
+                                    <td>${{ simulation.percentile_95|floatformat:0 }}</td>
+                                    <td>{% if simulation.target_goal %}{{ simulation.success_rate|floatformat:1 }}%{% else %}N/A{% endif %}</td>
+                                    <td>
+                                        <a href="{% url 'monte_carlo_simulation_detail' simulation.id %}" class="btn-secondary btn-sm">View Details</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="navigation-actions">
+                <div class="action-buttons">
+                    <a href="{% url 'results' %}" class="btn-secondary">Back to Results</a>
+                    <a href="{% url 'financial_dashboard' %}" class="btn-primary">Home</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

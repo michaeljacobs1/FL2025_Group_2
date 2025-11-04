@@ -404,3 +404,127 @@ class AICostEstimate(models.Model):
             + self.estimated_healthcare_annual
             + self.estimated_groceries_annual
         )
+
+
+class MonteCarloSimulation(models.Model):
+    """Monte Carlo simulation for investment projections"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    scenario = models.ForeignKey(
+        ProjectionScenario, on_delete=models.CASCADE, null=True, blank=True
+    )
+
+    # Simulation parameters
+    number_of_iterations = models.IntegerField(
+        help_text="Number of Monte Carlo iterations run"
+    )
+    projected_years = models.IntegerField(help_text="Number of years projected")
+
+    # Base parameters (from scenario or custom)
+    base_return_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, help_text="Expected annual return rate"
+    )
+    return_rate_std_dev = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Standard deviation of annual returns",
+    )
+    base_inflation_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, help_text="Expected inflation rate"
+    )
+    inflation_rate_std_dev = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Standard deviation of inflation rate",
+    )
+
+    # Statistical results (final year values)
+    mean_final_value = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Mean of all iterations"
+    )
+    median_final_value = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Median of all iterations"
+    )
+    std_dev_final_value = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Standard deviation"
+    )
+    min_final_value = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Minimum final value"
+    )
+    max_final_value = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Maximum final value"
+    )
+
+    # Percentiles (for confidence intervals)
+    percentile_5 = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="5th percentile (worst case)"
+    )
+    percentile_25 = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="25th percentile"
+    )
+    percentile_75 = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="75th percentile"
+    )
+    percentile_95 = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="95th percentile (best case)"
+    )
+
+    # Additional metadata
+    success_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Percentage of iterations that met goal (if goal set)",
+    )
+    target_goal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Target goal amount (optional)",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - Monte Carlo ({self.number_of_iterations} iterations, {self.projected_years} years)"
+
+
+class MonteCarloIteration(models.Model):
+    """Individual iteration result from Monte Carlo simulation"""
+
+    simulation = models.ForeignKey(
+        MonteCarloSimulation,
+        on_delete=models.CASCADE,
+        related_name="iterations",
+    )
+    iteration_number = models.IntegerField(help_text="Iteration number (1-indexed)")
+    final_value = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Final portfolio value"
+    )
+    total_contributions = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Total contributions made"
+    )
+    total_gains = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Total gains earned"
+    )
+
+    # Store average returns used in this iteration (for analysis)
+    avg_return_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, help_text="Average return rate used"
+    )
+    avg_inflation_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, help_text="Average inflation rate used"
+    )
+
+    class Meta:
+        ordering = ["iteration_number"]
+        unique_together = ["simulation", "iteration_number"]
+
+    def __str__(self):
+        return f"Iteration {self.iteration_number}: ${self.final_value}"

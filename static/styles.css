@@ -1599,7 +1599,7 @@ body {
 
 .comparison-table th,
 .comparison-table td {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -1608,10 +1608,25 @@ body {
   background: #f8fafc;
   font-weight: 600;
   color: #374151;
+  white-space: nowrap;
 }
 
 .comparison-table tr:hover {
   background: #f8fafc;
+}
+
+.comparison-table td {
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+.comparison-table td:last-child {
+  white-space: nowrap;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scenario-checkboxes {
@@ -2799,4 +2814,209 @@ input[name="costs[]"]:focus {
   font-size: 0.75rem;
   color: #6b7280;
   font-style: italic;
+}
+
+/* Monte Carlo Percentiles Styles */
+.percentile-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.percentile-item {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.percentile-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: currentColor;
+}
+
+.percentile-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.percentile-item.worst-case {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.percentile-item.worst-case::before {
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+}
+
+.percentile-item.conservative {
+  border-color: #f97316;
+  color: #f97316;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.percentile-item.conservative::before {
+  background: linear-gradient(90deg, #ea580c 0%, #f97316 100%);
+}
+
+.percentile-item.median {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border-width: 3px;
+  box-shadow: 0 6px 12px rgba(59, 130, 246, 0.15);
+}
+
+.percentile-item.median::before {
+  background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+  height: 6px;
+}
+
+.percentile-item.optimistic {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.percentile-item.optimistic::before {
+  background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
+}
+
+.percentile-item.best-case {
+  border-color: #10b981;
+  color: #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);
+}
+
+.percentile-item.best-case::before {
+  background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+}
+
+.percentile-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.percentile-label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+.percentile-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #1e293b;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.percentile-item.median .percentile-value {
+  font-size: 2rem;
+  color: #1e40af;
+}
+
+.percentile-description {
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.4;
+  margin-top: 0.5rem;
+}
+
+/* Percentile Visual Indicator */
+.percentile-item::after {
+  content: '';
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.8;
+  line-height: 36px;
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.percentile-item.worst-case::after {
+  content: '5%';
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.percentile-item.conservative::after {
+  content: '25%';
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.percentile-item.median::after {
+  content: '50%';
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  width: 44px;
+  height: 44px;
+  font-size: 0.8rem;
+  line-height: 44px;
+  top: 0.875rem;
+  right: 0.875rem;
+}
+
+.percentile-item.optimistic::after {
+  content: '75%';
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.percentile-item.best-case::after {
+  content: '95%';
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+/* Responsive Design for Percentiles */
+@media (max-width: 768px) {
+  .percentile-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .percentile-value {
+    font-size: 1.5rem;
+  }
+
+  .percentile-item.median .percentile-value {
+    font-size: 1.75rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .percentile-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

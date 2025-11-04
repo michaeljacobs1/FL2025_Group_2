@@ -1,0 +1,420 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monte Carlo Simulation Details - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link active">Monte Carlo</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Monte Carlo Simulation Results</h2>
+                <p>Detailed analysis of your Monte Carlo simulation run on {{ simulation.created_at|date:"F d, Y g:i A" }}</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Simulation Parameters -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Simulation Parameters</h3>
+                </div>
+                <div class="card-content">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <label>Scenario:</label>
+                            <span>{{ simulation.scenario.name|default:"Custom" }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Projected Years:</label>
+                            <span>{{ simulation.projected_years }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Iterations:</label>
+                            <span>{{ simulation.number_of_iterations|floatformat:0 }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Base Return Rate:</label>
+                            <span>{{ simulation.base_return_rate }}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Return Rate Std Dev:</label>
+                            <span>{{ simulation.return_rate_std_dev }}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Base Inflation Rate:</label>
+                            <span>{{ simulation.base_inflation_rate }}%</span>
+                        </div>
+                        {% if simulation.target_goal %}
+                        <div class="stat-item">
+                            <label>Target Goal:</label>
+                            <span>${{ simulation.target_goal|floatformat:0 }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Summary Statistics (Final Portfolio Value)</h3>
+                </div>
+                <div class="card-content">
+                    <div class="stats-grid">
+                        <div class="stat-item highlight">
+                            <label>Mean (Average):</label>
+                            <span class="stat-value">${{ simulation.mean_final_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="stat-item highlight">
+                            <label>Median (50th Percentile):</label>
+                            <span class="stat-value">${{ simulation.median_final_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Standard Deviation:</label>
+                            <span>${{ simulation.std_dev_final_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Minimum Value:</label>
+                            <span>${{ simulation.min_final_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Maximum Value:</label>
+                            <span>${{ simulation.max_final_value|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confidence Intervals / Percentiles -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Confidence Intervals (Percentiles)</h3>
+                    <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">
+                        These percentiles show the range of possible outcomes. For example, the 5th percentile means 
+                        5% of simulations resulted in values at or below this amount (worst case).
+                    </p>
+                </div>
+                <div class="card-content">
+                    <div class="percentile-container">
+                        <div class="percentile-item worst-case">
+                            <div class="percentile-label">5th Percentile (Worst Case)</div>
+                            <div class="percentile-value">${{ simulation.percentile_5|floatformat:2 }}</div>
+                            <div class="percentile-description">5% of scenarios perform worse than this</div>
+                        </div>
+                        <div class="percentile-item conservative">
+                            <div class="percentile-label">25th Percentile</div>
+                            <div class="percentile-value">${{ simulation.percentile_25|floatformat:2 }}</div>
+                            <div class="percentile-description">Conservative estimate</div>
+                        </div>
+                        <div class="percentile-item median">
+                            <div class="percentile-label">50th Percentile (Median)</div>
+                            <div class="percentile-value">${{ simulation.median_final_value|floatformat:2 }}</div>
+                            <div class="percentile-description">Most likely outcome</div>
+                        </div>
+                        <div class="percentile-item optimistic">
+                            <div class="percentile-label">75th Percentile</div>
+                            <div class="percentile-value">${{ simulation.percentile_75|floatformat:2 }}</div>
+                            <div class="percentile-description">Optimistic estimate</div>
+                        </div>
+                        <div class="percentile-item best-case">
+                            <div class="percentile-label">95th Percentile (Best Case)</div>
+                            <div class="percentile-value">${{ simulation.percentile_95|floatformat:2 }}</div>
+                            <div class="percentile-description">5% of scenarios perform better than this</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if simulation.target_goal %}
+            <!-- Success Rate -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Goal Achievement Probability</h3>
+                </div>
+                <div class="card-content">
+                    <div class="success-rate-display">
+                        <div class="success-rate-value">{{ simulation.success_rate|floatformat:1 }}%</div>
+                        <p class="success-rate-description">
+                            Probability of reaching your target goal of ${{ simulation.target_goal|floatformat:0 }}
+                        </p>
+                        <div class="success-rate-bar">
+                            <div class="success-rate-fill" style="width: {{ simulation.success_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Distribution Chart -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Distribution Visualization</h3>
+                    <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">
+                        Probability distribution of final portfolio values across all {{ simulation.number_of_iterations|floatformat:0 }} iterations
+                    </p>
+                </div>
+                <div class="card-content">
+                    <div class="chart-container">
+                        <canvas id="distributionChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Percentile Comparison Chart -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Percentile Comparison</h3>
+                </div>
+                <div class="card-content">
+                    <div class="chart-container">
+                        <canvas id="percentileChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Insights -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Key Insights</h3>
+                </div>
+                <div class="card-content">
+                    <div class="insights-list">
+                        <div class="insight-item">
+                            <strong>Expected Outcome:</strong> 
+                            The median (50th percentile) final value is ${{ simulation.median_final_value|floatformat:2 }}, 
+                            meaning half of all simulations result in higher values and half in lower values.
+                        </div>
+                        <div class="insight-item">
+                            <strong>Range of Outcomes:</strong> 
+                            Your final portfolio value could range from ${{ simulation.percentile_5|floatformat:2 }} 
+                            (worst case) to ${{ simulation.percentile_95|floatformat:2 }} (best case).
+                        </div>
+                        <div class="insight-item">
+                            <strong>Risk Assessment:</strong> 
+                            With a standard deviation of ${{ simulation.std_dev_final_value|floatformat:2 }}, 
+                            there is significant variability in the outcomes.
+                        </div>
+                        {% if simulation.target_goal %}
+                        <div class="insight-item">
+                            <strong>Goal Achievement:</strong> 
+                            {% if simulation.success_rate >= 75 %}
+                            There's a high probability ({{ simulation.success_rate|floatformat:1 }}%) of reaching your goal. 
+                            This is a good sign that your financial plan is on track.
+                            {% elif simulation.success_rate >= 50 %}
+                            There's a moderate probability ({{ simulation.success_rate|floatformat:1 }}%) of reaching your goal. 
+                            Consider adjusting your savings rate or investment strategy to improve your odds.
+                            {% else %}
+                            The probability ({{ simulation.success_rate|floatformat:1 }}%) of reaching your goal is relatively low. 
+                            Consider increasing your savings rate, extending your time horizon, or adjusting your investment strategy.
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if iterations %}
+            <!-- Iterations Table (if stored) -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h3>Individual Iterations (Sample)</h3>
+                    <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">
+                        Showing first 100 iterations ({{ iterations|length }} total stored)
+                    </p>
+                </div>
+                <div class="card-content">
+                    <div class="table-responsive">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Iteration</th>
+                                    <th>Final Value</th>
+                                    <th>Total Contributions</th>
+                                    <th>Total Gains</th>
+                                    <th>Avg Return Rate</th>
+                                    <th>Avg Inflation Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for iteration in iterations|slice:":100" %}
+                                <tr>
+                                    <td>{{ iteration.iteration_number }}</td>
+                                    <td>${{ iteration.final_value|floatformat:2 }}</td>
+                                    <td>${{ iteration.total_contributions|floatformat:2 }}</td>
+                                    <td>${{ iteration.total_gains|floatformat:2 }}</td>
+                                    <td>{{ iteration.avg_return_rate|floatformat:2 }}%</td>
+                                    <td>{{ iteration.avg_inflation_rate|floatformat:2 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="navigation-actions">
+                <div class="action-buttons">
+                    <a href="{% url 'monte_carlo_simulation' %}" class="btn-secondary">Back to Monte Carlo</a>
+                    <a href="{% url 'results' %}" class="btn-secondary">Results</a>
+                    <a href="{% url 'financial_dashboard' %}" class="btn-primary">Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Distribution Chart (Histogram)
+        // Note: For a true histogram, we'd need the actual iteration data
+        // For now, we'll show a simplified visualization using percentiles
+        const percentileCtx = document.getElementById('percentileChart').getContext('2d');
+        
+        const percentileChart = new Chart(percentileCtx, {
+            type: 'bar',
+            data: {
+                labels: ['5th', '25th', '50th (Median)', '75th', '95th'],
+                datasets: [{
+                    label: 'Final Portfolio Value',
+                    data: [
+                        {{ simulation.percentile_5|floatformat:0 }},
+                        {{ simulation.percentile_25|floatformat:0 }},
+                        {{ simulation.median_final_value|floatformat:0 }},
+                        {{ simulation.percentile_75|floatformat:0 }},
+                        {{ simulation.percentile_95|floatformat:0 }}
+                    ],
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.8)',   // Red for 5th
+                        'rgba(251, 146, 60, 0.8)',  // Orange for 25th
+                        'rgba(59, 130, 246, 0.8)',  // Blue for median
+                        'rgba(34, 197, 94, 0.8)',   // Green for 75th
+                        'rgba(16, 185, 129, 0.8)'   // Teal for 95th
+                    ],
+                    borderColor: [
+                        '#ef4444',
+                        '#fb923c',
+                        '#3b82f6',
+                        '#22c55e',
+                        '#10b981'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Percentile Distribution of Final Values'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Distribution Chart - Simplified bell curve visualization
+        const distCtx = document.getElementById('distributionChart').getContext('2d');
+        
+        // Create a simplified normal distribution visualization
+        // Using mean and std dev to create sample points
+        const mean = {{ simulation.mean_final_value|floatformat:0 }};
+        const stdDev = {{ simulation.std_dev_final_value|floatformat:0 }};
+        const min = {{ simulation.percentile_5|floatformat:0 }};
+        const max = {{ simulation.percentile_95|floatformat:0 }};
+        
+        // Create sample data points for visualization
+        const samplePoints = [];
+        const labels = [];
+        for (let i = 0; i < 20; i++) {
+            const value = min + (max - min) * (i / 19);
+            labels.push('$' + Math.round(value/1000) + 'k');
+            // Simplified normal distribution curve
+            const z = (value - mean) / stdDev;
+            const density = Math.exp(-0.5 * z * z);
+            samplePoints.push(density * 1000); // Scale for visualization
+        }
+        
+        const distributionChart = new Chart(distCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Probability Density',
+                    data: samplePoints,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Estimated Probability Distribution (Normal Approximation)'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Relative Probability'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Final Portfolio Value'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
