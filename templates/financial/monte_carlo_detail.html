@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -47,38 +48,40 @@
                     <h3>Simulation Parameters</h3>
                 </div>
                 <div class="card-content">
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <label>Scenario:</label>
-                            <span>{{ simulation.scenario.name|default:"Custom" }}</span>
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div class="stat-item" style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); border-left: 4px solid #6366f1; padding: 1rem; border-radius: 8px;">
+                            <label style="color: #4338ca; font-weight: 600; display: block; margin-bottom: 0.5rem;">Scenario:</label>
+                            <span style="color: #3730a3; font-weight: 700; font-size: 1.125rem;">{{ simulation.scenario.name|default:"Custom" }}</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Projected Years:</label>
-                            <span>{{ simulation.projected_years }}</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 8px;">
+                            <label style="color: #1e40af; font-weight: 600; display: block; margin-bottom: 0.5rem;">Projected Years:</label>
+                            <span style="color: #1e3a8a; font-weight: 700; font-size: 1.125rem;">{{ simulation.projected_years }}</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Iterations:</label>
-                            <span>{{ simulation.number_of_iterations|floatformat:0 }}</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 8px;">
+                            <label style="color: #92400e; font-weight: 600; display: block; margin-bottom: 0.5rem;">Iterations:</label>
+                            <span style="color: #78350f; font-weight: 700; font-size: 1.125rem;">{{ simulation.number_of_iterations|floatformat:0|intcomma }}</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Base Return Rate:</label>
-                            <span>{{ simulation.base_return_rate }}%</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e; padding: 1rem; border-radius: 8px;">
+                            <label style="color: #166534; font-weight: 600; display: block; margin-bottom: 0.5rem;">Base Return Rate:</label>
+                            <span style="color: #14532d; font-weight: 700; font-size: 1.125rem;">{{ simulation.base_return_rate }}%</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Return Rate Std Dev:</label>
-                            <span>{{ simulation.return_rate_std_dev }}%</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px;">
+                            <label style="color: #991b1b; font-weight: 600; display: block; margin-bottom: 0.5rem;">Return Rate Std Dev:</label>
+                            <span style="color: #7f1d1d; font-weight: 700; font-size: 1.125rem;">{{ simulation.return_rate_std_dev }}%</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Base Inflation Rate:</label>
-                            <span>{{ simulation.base_inflation_rate }}%</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 8px;">
+                            <label style="color: #92400e; font-weight: 600; display: block; margin-bottom: 0.5rem;">Base Inflation Rate:</label>
+                            <span style="color: #78350f; font-weight: 700; font-size: 1.125rem;">{{ simulation.base_inflation_rate }}%</span>
                         </div>
-                        {% if simulation.target_goal %}
-                        <div class="stat-item">
-                            <label>Target Goal:</label>
-                            <span>${{ simulation.target_goal|floatformat:0 }}</span>
-                        </div>
-                        {% endif %}
                     </div>
+                    {% if simulation.target_goal %}
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e2e8f0;">
+                        <div class="stat-item" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid #10b981; padding: 1rem; border-radius: 8px; max-width: 33%;">
+                            <label style="color: #065f46; font-weight: 600; display: block; margin-bottom: 0.5rem;">Target Goal:</label>
+                            <span style="color: #047857; font-weight: 700; font-size: 1.125rem;">${{ simulation.target_goal|floatformat:0|intcomma }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -89,25 +92,25 @@
                 </div>
                 <div class="card-content">
                     <div class="stats-grid">
-                        <div class="stat-item highlight">
-                            <label>Mean (Average):</label>
-                            <span class="stat-value">${{ simulation.mean_final_value|floatformat:2 }}</span>
+                        <div class="stat-item highlight" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6;">
+                            <label style="color: #1e40af;">Mean (Average):</label>
+                            <span class="stat-value" style="color: #1e3a8a; font-weight: 700;">${{ simulation.mean_final_value|floatformat:2|intcomma }}</span>
                         </div>
-                        <div class="stat-item highlight">
-                            <label>Median (50th Percentile):</label>
-                            <span class="stat-value">${{ simulation.median_final_value|floatformat:2 }}</span>
+                        <div class="stat-item highlight" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #22c55e;">
+                            <label style="color: #166534;">Median (50th Percentile):</label>
+                            <span class="stat-value" style="color: #14532d; font-weight: 700;">${{ simulation.median_final_value|floatformat:2|intcomma }}</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Standard Deviation:</label>
-                            <span>${{ simulation.std_dev_final_value|floatformat:2 }}</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+                            <label style="color: #92400e;">Standard Deviation:</label>
+                            <span style="color: #78350f; font-weight: 600;">${{ simulation.std_dev_final_value|floatformat:2|intcomma }}</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Minimum Value:</label>
-                            <span>${{ simulation.min_final_value|floatformat:2 }}</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #ef4444;">
+                            <label style="color: #991b1b;">Minimum Value:</label>
+                            <span style="color: #7f1d1d; font-weight: 600;">${{ simulation.min_final_value|floatformat:2|intcomma }}</span>
                         </div>
-                        <div class="stat-item">
-                            <label>Maximum Value:</label>
-                            <span>${{ simulation.max_final_value|floatformat:2 }}</span>
+                        <div class="stat-item" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid #10b981;">
+                            <label style="color: #065f46;">Maximum Value:</label>
+                            <span style="color: #047857; font-weight: 600;">${{ simulation.max_final_value|floatformat:2|intcomma }}</span>
                         </div>
                     </div>
                 </div>
@@ -126,27 +129,27 @@
                     <div class="percentile-container">
                         <div class="percentile-item worst-case">
                             <div class="percentile-label">5th Percentile (Worst Case)</div>
-                            <div class="percentile-value">${{ simulation.percentile_5|floatformat:2 }}</div>
+                            <div class="percentile-value">${{ simulation.percentile_5|floatformat:2|intcomma }}</div>
                             <div class="percentile-description">5% of scenarios perform worse than this</div>
                         </div>
                         <div class="percentile-item conservative">
                             <div class="percentile-label">25th Percentile</div>
-                            <div class="percentile-value">${{ simulation.percentile_25|floatformat:2 }}</div>
+                            <div class="percentile-value">${{ simulation.percentile_25|floatformat:2|intcomma }}</div>
                             <div class="percentile-description">Conservative estimate</div>
                         </div>
                         <div class="percentile-item median">
                             <div class="percentile-label">50th Percentile (Median)</div>
-                            <div class="percentile-value">${{ simulation.median_final_value|floatformat:2 }}</div>
+                            <div class="percentile-value">${{ simulation.median_final_value|floatformat:2|intcomma }}</div>
                             <div class="percentile-description">Most likely outcome</div>
                         </div>
                         <div class="percentile-item optimistic">
                             <div class="percentile-label">75th Percentile</div>
-                            <div class="percentile-value">${{ simulation.percentile_75|floatformat:2 }}</div>
+                            <div class="percentile-value">${{ simulation.percentile_75|floatformat:2|intcomma }}</div>
                             <div class="percentile-description">Optimistic estimate</div>
                         </div>
                         <div class="percentile-item best-case">
                             <div class="percentile-label">95th Percentile (Best Case)</div>
-                            <div class="percentile-value">${{ simulation.percentile_95|floatformat:2 }}</div>
+                            <div class="percentile-value">${{ simulation.percentile_95|floatformat:2|intcomma }}</div>
                             <div class="percentile-description">5% of scenarios perform better than this</div>
                         </div>
                     </div>
@@ -161,12 +164,24 @@
                 </div>
                 <div class="card-content">
                     <div class="success-rate-display">
-                        <div class="success-rate-value">{{ simulation.success_rate|floatformat:1 }}%</div>
+                        {% if simulation.success_rate >= 75 %}
+                        <div class="success-rate-value" style="color: #059669; font-size: 3rem; font-weight: 800; text-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);">{{ simulation.success_rate|floatformat:1 }}%</div>
+                        {% elif simulation.success_rate >= 50 %}
+                        <div class="success-rate-value" style="color: #f59e0b; font-size: 3rem; font-weight: 800; text-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);">{{ simulation.success_rate|floatformat:1 }}%</div>
+                        {% else %}
+                        <div class="success-rate-value" style="color: #dc2626; font-size: 3rem; font-weight: 800; text-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);">{{ simulation.success_rate|floatformat:1 }}%</div>
+                        {% endif %}
                         <p class="success-rate-description">
-                            Probability of reaching your target goal of ${{ simulation.target_goal|floatformat:0 }}
+                            Probability of reaching your target goal of ${{ simulation.target_goal|floatformat:0|intcomma }}
                         </p>
-                        <div class="success-rate-bar">
-                            <div class="success-rate-fill" style="width: {{ simulation.success_rate }}%"></div>
+                        <div class="success-rate-bar" style="background: #e5e7eb; border-radius: 10px; height: 30px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                            {% if simulation.success_rate >= 75 %}
+                            <div class="success-rate-fill" style="width: {{ simulation.success_rate }}%; background: linear-gradient(90deg, #059669 0%, #10b981 50%, #34d399 100%); height: 100%; transition: width 1s ease; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);"></div>
+                            {% elif simulation.success_rate >= 50 %}
+                            <div class="success-rate-fill" style="width: {{ simulation.success_rate }}%; background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%); height: 100%; transition: width 1s ease; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);"></div>
+                            {% else %}
+                            <div class="success-rate-fill" style="width: {{ simulation.success_rate }}%; background: linear-gradient(90deg, #dc2626 0%, #ef4444 50%, #f87171 100%); height: 100%; transition: width 1s ease; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);"></div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -209,17 +224,17 @@
                     <div class="insights-list">
                         <div class="insight-item">
                             <strong>Expected Outcome:</strong> 
-                            The median (50th percentile) final value is ${{ simulation.median_final_value|floatformat:2 }}, 
+                            The median (50th percentile) final value is ${{ simulation.median_final_value|floatformat:2|intcomma }}, 
                             meaning half of all simulations result in higher values and half in lower values.
                         </div>
                         <div class="insight-item">
                             <strong>Range of Outcomes:</strong> 
-                            Your final portfolio value could range from ${{ simulation.percentile_5|floatformat:2 }} 
-                            (worst case) to ${{ simulation.percentile_95|floatformat:2 }} (best case).
+                            Your final portfolio value could range from ${{ simulation.percentile_5|floatformat:2|intcomma }} 
+                            (worst case) to ${{ simulation.percentile_95|floatformat:2|intcomma }} (best case).
                         </div>
                         <div class="insight-item">
                             <strong>Risk Assessment:</strong> 
-                            With a standard deviation of ${{ simulation.std_dev_final_value|floatformat:2 }}, 
+                            With a standard deviation of ${{ simulation.std_dev_final_value|floatformat:2|intcomma }}, 
                             there is significant variability in the outcomes.
                         </div>
                         {% if simulation.target_goal %}
@@ -267,9 +282,9 @@
                                 {% for iteration in iterations|slice:":100" %}
                                 <tr>
                                     <td>{{ iteration.iteration_number }}</td>
-                                    <td>${{ iteration.final_value|floatformat:2 }}</td>
-                                    <td>${{ iteration.total_contributions|floatformat:2 }}</td>
-                                    <td>${{ iteration.total_gains|floatformat:2 }}</td>
+                                    <td>${{ iteration.final_value|floatformat:2|intcomma }}</td>
+                                    <td>${{ iteration.total_contributions|floatformat:2|intcomma }}</td>
+                                    <td>${{ iteration.total_gains|floatformat:2|intcomma }}</td>
                                     <td>{{ iteration.avg_return_rate|floatformat:2 }}%</td>
                                     <td>{{ iteration.avg_inflation_rate|floatformat:2 }}%</td>
                                 </tr>
@@ -285,7 +300,7 @@
                 <div class="action-buttons">
                     <a href="{% url 'monte_carlo_simulation' %}" class="btn-secondary">Back to Monte Carlo</a>
                     <a href="{% url 'results' %}" class="btn-secondary">Results</a>
-                    <a href="{% url 'financial_dashboard' %}" class="btn-primary">Dashboard</a>
+                    <a href="{% url 'financial_dashboard' %}" class="btn-primary">Home</a>
                 </div>
             </div>
         </div>
@@ -311,20 +326,20 @@
                         {{ simulation.percentile_95|floatformat:0 }}
                     ],
                     backgroundColor: [
-                        'rgba(239, 68, 68, 0.8)',   // Red for 5th
-                        'rgba(251, 146, 60, 0.8)',  // Orange for 25th
-                        'rgba(59, 130, 246, 0.8)',  // Blue for median
-                        'rgba(34, 197, 94, 0.8)',   // Green for 75th
-                        'rgba(16, 185, 129, 0.8)'   // Teal for 95th
+                        'rgba(239, 68, 68, 0.9)',   // Red for 5th
+                        'rgba(251, 146, 60, 0.9)',  // Orange for 25th
+                        'rgba(59, 130, 246, 0.9)',  // Blue for median
+                        'rgba(34, 197, 94, 0.9)',   // Green for 75th
+                        'rgba(16, 185, 129, 0.9)'   // Teal for 95th
                     ],
                     borderColor: [
-                        '#ef4444',
-                        '#fb923c',
-                        '#3b82f6',
-                        '#22c55e',
-                        '#10b981'
+                        '#dc2626',
+                        '#ea580c',
+                        '#2563eb',
+                        '#16a34a',
+                        '#059669'
                     ],
-                    borderWidth: 1
+                    borderWidth: 2
                 }]
             },
             options: {

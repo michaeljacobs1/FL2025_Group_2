@@ -37,12 +37,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
     # third-party apps
     "rest_framework",
     "corsheaders",
     # your apps
     "api",
-    "accounts",
 ]
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
