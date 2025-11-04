@@ -3,7 +3,6 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 
-from accounts.forms import SignupForm
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
@@ -13,6 +12,7 @@ from django.views import View
 from django.views.generic import CreateView, TemplateView
 from rest_framework import permissions, viewsets
 
+from .forms import SignupForm
 from .models import (
     AICostEstimate,
     FinancialProfile,

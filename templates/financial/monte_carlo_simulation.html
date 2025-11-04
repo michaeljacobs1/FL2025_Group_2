@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +8,31 @@
     <title>Monte Carlo Simulation - {{ user.username }}</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .comparison-table tbody tr {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .comparison-table tbody tr:hover {
+            background: linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%) !important;
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        .comparison-table tbody tr:hover td {
+            color: #1e40af;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb !important;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+            transform: translateY(-1px);
+        }
+        .form-group {
+            transition: all 0.2s ease;
+        }
+        .form-group:hover {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -41,16 +67,41 @@
                 </div>
             {% endif %}
 
-            <div class="card form-card">
-                <div class="card-header">
-                    <h3>Run New Simulation</h3>
+            <div class="card form-card" style="border-left: 4px solid #3b82f6;">
+                <div class="card-header" style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 1.25rem;">
+                    <h3 style="color: #1e293b; font-weight: 600;">Run New Simulation</h3>
                 </div>
                 <div class="card-content">
                     <form method="post" class="monte-carlo-form">
                         {% csrf_token %}
-                        <div class="form-group">
-                            <label for="scenario_id">Select Scenario (or use custom parameters below):</label>
-                            <select id="scenario_id" name="scenario_id" class="form-control">
+                        <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #10b981;">
+                            <label for="target_goal" style="color: #475569; font-weight: 600;">Target Portfolio Value (Optional):</label>
+                            <input type="number" id="target_goal" name="target_goal" 
+                                   placeholder="e.g., 1000000" step="1000" class="form-control" style="border-color: #cbd5e1;">
+                            <small class="form-text" style="color: #64748b;">The dollar amount you want to reach (e.g., $1,000,000 for retirement). If provided, the simulation will calculate the probability of reaching this goal.</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #10b981;">
+                                <label for="projected_years" style="color: #475569; font-weight: 600;">Projected Years:</label>
+                                <input type="number" id="projected_years" name="projected_years" 
+                                       value="30" min="1" max="50" required class="form-control" style="border-color: #cbd5e1;">
+                            </div>
+                            <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #10b981;">
+                                <label for="number_of_iterations" style="color: #475569; font-weight: 600;">Number of Iterations:</label>
+                                <input type="number" id="number_of_iterations" name="number_of_iterations" 
+                                       value="1000" min="100" max="10000" step="100" required class="form-control" style="border-color: #cbd5e1;">
+                                <small class="form-text" style="color: #64748b;">More iterations = more accurate but slower (1000-5000 recommended)</small>
+                            </div>
+                        </div>
+
+                        <div style="margin: 2rem 0 1rem 0;">
+                            <h4 style="color: #1e293b; font-weight: 700; margin: 0;">Option 1 (Simple)</h4>
+                        </div>
+
+                        <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #ef4444;">
+                            <label for="scenario_id" style="color: #475569; font-weight: 600;">Select Scenario:</label>
+                            <select id="scenario_id" name="scenario_id" class="form-control" style="border-color: #cbd5e1;">
                                 <option value="">-- Select Scenario --</option>
                                 {% for scenario in scenarios %}
                                 <option value="{{ scenario.id }}">
@@ -58,67 +109,46 @@
                                 </option>
                                 {% endfor %}
                             </select>
-                            <small class="form-text">Optional: Select a scenario to use its parameters as defaults</small>
+                        </div>
+
+                        <div style="margin: 2rem 0 1rem 0;">
+                            <h4 style="color: #1e293b; font-weight: 700; margin: 0;">Option 2 (Advanced)</h4>
                         </div>
 
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="projected_years">Projected Years:</label>
-                                <input type="number" id="projected_years" name="projected_years" 
-                                       value="30" min="1" max="50" required class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="number_of_iterations">Number of Iterations:</label>
-                                <input type="number" id="number_of_iterations" name="number_of_iterations" 
-                                       value="1000" min="100" max="10000" step="100" required class="form-control">
-                                <small class="form-text">More iterations = more accurate but slower (1000-5000 recommended)</small>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="target_goal">Target Portfolio Value (Optional):</label>
-                            <input type="number" id="target_goal" name="target_goal" 
-                                   placeholder="e.g., 1000000" step="1000" class="form-control">
-                            <small class="form-text">The dollar amount you want to reach (e.g., $1,000,000 for retirement). If provided, the simulation will calculate the probability of reaching this goal.</small>
-                        </div>
-
-                        <div class="form-divider">
-                            <h4>Custom Parameters (Optional - Overrides scenario)</h4>
-                            <p class="form-text">Leave blank to use scenario defaults</p>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="base_return_rate">Expected Annual Return Rate (%):</label>
+                            <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #3b82f6;">
+                                <label for="base_return_rate" style="color: #475569; font-weight: 600;">Expected Annual Return Rate (%):</label>
                                 <input type="number" id="base_return_rate" name="base_return_rate" 
-                                       step="0.1" class="form-control" placeholder="e.g., 7.0">
-                                <small class="form-text">Your expected average annual investment return. Conservative: 4-5%, Moderate: 6-8%, Aggressive: 9-11%</small>
+                                       step="0.1" class="form-control" placeholder="e.g., 7.0" style="border-color: #cbd5e1;">
+                                <small class="form-text" style="color: #64748b;">Your expected average annual investment return. Conservative: 4-5%, Moderate: 6-8%, Aggressive: 9-11%</small>
                             </div>
-                            <div class="form-group">
-                                <label for="return_rate_std_dev">Return Volatility / Risk (%):</label>
+                            <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #3b82f6;">
+                                <label for="return_rate_std_dev" style="color: #475569; font-weight: 600;">Return Volatility / Risk (%):</label>
                                 <input type="number" id="return_rate_std_dev" name="return_rate_std_dev" 
-                                       step="0.1" class="form-control" placeholder="e.g., 14.0">
-                                <small class="form-text">How much your returns vary year-to-year (standard deviation). Low risk: 8-10%, Medium: 12-16%, High: 18-22%</small>
+                                       step="0.1" class="form-control" placeholder="e.g., 14.0" style="border-color: #cbd5e1;">
+                                <small class="form-text" style="color: #64748b;">How much your returns vary year-to-year (standard deviation). Low risk: 8-10%, Medium: 12-16%, High: 18-22%</small>
                             </div>
                         </div>
 
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="base_inflation_rate">Expected Annual Inflation Rate (%):</label>
+                            <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #3b82f6;">
+                                <label for="base_inflation_rate" style="color: #475569; font-weight: 600;">Expected Annual Inflation Rate (%):</label>
                                 <input type="number" id="base_inflation_rate" name="base_inflation_rate" 
-                                       step="0.1" class="form-control" placeholder="e.g., 3.0">
-                                <small class="form-text">Expected average annual inflation. Historical average: 2-3%. Current typical range: 2.5-3.5%</small>
+                                       step="0.1" class="form-control" placeholder="e.g., 3.0" style="border-color: #cbd5e1;">
+                                <small class="form-text" style="color: #64748b;">Expected average annual inflation. Historical average: 2-3%. Current typical range: 2.5-3.5%</small>
                             </div>
-                            <div class="form-group">
-                                <label for="inflation_rate_std_dev">Inflation Volatility (%):</label>
+                            <div class="form-group" style="padding-left: 1rem; border-left: 3px solid #3b82f6;">
+                                <label for="inflation_rate_std_dev" style="color: #475569; font-weight: 600;">Inflation Volatility (%):</label>
                                 <input type="number" id="inflation_rate_std_dev" name="inflation_rate_std_dev" 
-                                       step="0.1" class="form-control" placeholder="e.g., 1.0">
-                                <small class="form-text">How much inflation varies year-to-year. Typical range: 0.5-2.0%. Lower values = more stable economy</small>
+                                       step="0.1" class="form-control" placeholder="e.g., 1.0" style="border-color: #cbd5e1;">
+                                <small class="form-text" style="color: #64748b;">How much inflation varies year-to-year. Typical range: 0.5-2.0%. Lower values = more stable economy</small>
                             </div>
                         </div>
 
-                        <div class="form-actions">
-                            <button type="submit" class="btn-primary">Run Monte Carlo Simulation</button>
+                        <div class="form-actions" style="margin-top: 1.5rem;">
+                            <button type="submit" class="btn-primary" style="background-color: #3b82f6; color: white; border: none; padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2); transition: all 0.2s ease;">
+                                Run Monte Carlo Simulation
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -131,35 +161,53 @@
                 </div>
                 <div class="card-content">
                     <div class="table-responsive">
-                        <table class="comparison-table">
+                        <table class="comparison-table" style="border-collapse: separate; border-spacing: 0;">
                             <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Scenario</th>
-                                    <th>Years</th>
-                                    <th>Iterations</th>
-                                    <th>Mean Value</th>
-                                    <th>Median Value</th>
-                                    <th>5th %ile</th>
-                                    <th>95th %ile</th>
-                                    <th>Success Rate</th>
-                                    <th>Actions</th>
+                                <tr style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white;">
+                                    <th style="padding: 1rem; font-weight: 700;">Date</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Scenario</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Years</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Iterations</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Mean Value</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Median Value</th>
+                                    <th style="padding: 1rem; font-weight: 700;">5th %ile</th>
+                                    <th style="padding: 1rem; font-weight: 700;">95th %ile</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Success Rate</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for simulation in simulations %}
-                                <tr>
+                                <tr style="{% cycle 'background-color: #fafafa;' 'background-color: #ffffff;' %}">
                                     <td>{{ simulation.created_at|date:"M d, Y g:i A" }}</td>
                                     <td>{{ simulation.scenario.name|default:"Custom" }}</td>
-                                    <td>{{ simulation.projected_years }}</td>
-                                    <td>{{ simulation.number_of_iterations|floatformat:0 }}</td>
-                                    <td>${{ simulation.mean_final_value|floatformat:0 }}</td>
-                                    <td>${{ simulation.median_final_value|floatformat:0 }}</td>
-                                    <td>${{ simulation.percentile_5|floatformat:0 }}</td>
-                                    <td>${{ simulation.percentile_95|floatformat:0 }}</td>
-                                    <td>{% if simulation.target_goal %}{{ simulation.success_rate|floatformat:1 }}%{% else %}N/A{% endif %}</td>
+                                    <td><strong style="color: #3b82f6;">{{ simulation.projected_years }}</strong></td>
+                                    <td style="color: #6b7280;">{{ simulation.number_of_iterations|floatformat:0|intcomma }}</td>
+                                    <td><strong style="color: #1e40af;">${{ simulation.mean_final_value|floatformat:0|intcomma }}</strong></td>
+                                    <td><strong style="color: #166534;">${{ simulation.median_final_value|floatformat:0|intcomma }}</strong></td>
+                                    <td style="color: #dc2626; font-weight: 600;">${{ simulation.percentile_5|floatformat:0|intcomma }}</td>
+                                    <td style="color: #059669; font-weight: 600;">${{ simulation.percentile_95|floatformat:0|intcomma }}</td>
                                     <td>
-                                        <a href="{% url 'monte_carlo_simulation_detail' simulation.id %}" class="btn-secondary btn-sm">View Details</a>
+                                        {% if simulation.target_goal %}
+                                            {% if simulation.success_rate >= 75 %}
+                                            <span style="padding: 4px 10px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border: 2px solid #10b981;">
+                                                {{ simulation.success_rate|floatformat:1 }}%
+                                            </span>
+                                            {% elif simulation.success_rate >= 50 %}
+                                            <span style="padding: 4px 10px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 2px solid #f59e0b;">
+                                                {{ simulation.success_rate|floatformat:1 }}%
+                                            </span>
+                                            {% else %}
+                                            <span style="padding: 4px 10px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; border: 2px solid #ef4444;">
+                                                {{ simulation.success_rate|floatformat:1 }}%
+                                            </span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span style="color: #9ca3af;">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'monte_carlo_simulation_detail' simulation.id %}" class="btn-secondary btn-sm" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; transition: all 0.2s;">View Details</a>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -180,3 +228,4 @@
     </main>
 </body>
 </html>
+
