@@ -220,28 +220,32 @@ class LocationPreference(models.Model):
 
 
 class SpendingPreference(models.Model):
-    """User's spending preferences for different categories"""
-
-    SPENDING_CHOICES = [
-        ("very_little", "Very Little"),
-        ("less_than_average", "Less Than Average"),
-        ("average", "Average"),
-        ("above_average", "Above Average"),
-        ("very_high", "Very High"),
-    ]
+    """User's spending preferences for different categories as percentages of income"""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    housing_spending = models.CharField(
-        max_length=20, choices=SPENDING_CHOICES, default="average"
+    housing_spending = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=30.00,
+        help_text="Percentage of income spent on housing (0-100)",
     )
-    travel_spending = models.CharField(
-        max_length=20, choices=SPENDING_CHOICES, default="average"
+    travel_spending = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10.00,
+        help_text="Percentage of income spent on travel (0-100)",
     )
-    food_spending = models.CharField(
-        max_length=20, choices=SPENDING_CHOICES, default="average"
+    food_spending = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=15.00,
+        help_text="Percentage of income spent on food (0-100)",
     )
-    leisure_spending = models.CharField(
-        max_length=20, choices=SPENDING_CHOICES, default="average"
+    leisure_spending = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10.00,
+        help_text="Percentage of income spent on leisure (0-100)",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

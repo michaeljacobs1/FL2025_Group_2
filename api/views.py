@@ -595,10 +595,10 @@ class FinancialInformationView(LoginRequiredMixin, View):
             start_years = request.POST.getlist("start_years[]")
             end_years = request.POST.getlist("end_years[]")
 
-            housing_spending = request.POST.get("housing_spending", "average")
-            travel_spending = request.POST.get("travel_spending", "average")
-            food_spending = request.POST.get("food_spending", "average")
-            leisure_spending = request.POST.get("leisure_spending", "average")
+            housing_spending = float(request.POST.get("housing_spending", 30.0))
+            travel_spending = float(request.POST.get("travel_spending", 10.0))
+            food_spending = float(request.POST.get("food_spending", 15.0))
+            leisure_spending = float(request.POST.get("leisure_spending", 10.0))
 
             # Validate required data
             if not years or not incomes or not locations:
@@ -621,14 +621,14 @@ class FinancialInformationView(LoginRequiredMixin, View):
                         else int(years[-1]),
                     )
 
-            # Save spending preferences
+            # Save spending preferences (as percentages)
             SpendingPreference.objects.filter(user=request.user).delete()
             SpendingPreference.objects.create(
                 user=request.user,
-                housing_spending=housing_spending,
-                travel_spending=travel_spending,
-                food_spending=food_spending,
-                leisure_spending=leisure_spending,
+                housing_spending=Decimal(str(housing_spending)),
+                travel_spending=Decimal(str(travel_spending)),
+                food_spending=Decimal(str(food_spending)),
+                leisure_spending=Decimal(str(leisure_spending)),
             )
 
             # Generate costs for each year
@@ -702,34 +702,61 @@ class FinancialInformationView(LoginRequiredMixin, View):
             income_data = json.loads(request.POST.get("income_data", "[]"))
             location_data = json.loads(request.POST.get("location_data", "[]"))
             spending_data = json.loads(request.POST.get("spending_data", "{}"))
+            spending_mode = spending_data.get(
+                "mode", "percentage_based"
+            )  # Default to percentage-based
+
+            # Debug logging
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"Processing generate_results: mode={spending_mode}, location_data={location_data}, spending_data={spending_data}"
+            )
 
             if not income_data:
                 return JsonResponse(
                     {"success": False, "error": "No income data provided"}
                 )
 
-            # Save location preferences
+            # Save location preferences (only for location-based mode)
             LocationPreference.objects.filter(user=request.user).delete()
-            for loc in location_data:
-                state = loc.get("state")
-                area_level = loc.get("areaLevel", "average")
-                label = f"{state} ({area_level.replace('_', ' ')})"
-                LocationPreference.objects.create(
-                    user=request.user,
-                    location=label,
-                    start_year=loc["startYear"],
-                    end_year=loc["endYear"],
-                )
+            if spending_mode == "location_based" and location_data:
+                for loc in location_data:
+                    state = loc.get("state")
+                    area_level = loc.get("areaLevel", "average")
+                    label = f"{state} ({area_level.replace('_', ' ')})"
+                    LocationPreference.objects.create(
+                        user=request.user,
+                        location=label,
+                        start_year=loc["startYear"],
+                        end_year=loc["endYear"],
+                    )
 
             # Save spending preferences
             SpendingPreference.objects.filter(user=request.user).delete()
-            SpendingPreference.objects.create(
-                user=request.user,
-                housing_spending=spending_data.get("housing", "average"),
-                travel_spending=spending_data.get("travel", "average"),
-                food_spending=spending_data.get("food", "average"),
-                leisure_spending=spending_data.get("leisure", "average"),
-            )
+            if spending_mode == "location_based":
+                # Option 1: Save as text choices (for backward compatibility with old multiplier system)
+                SpendingPreference.objects.create(
+                    user=request.user,
+                    housing_spending=Decimal(
+                        "30.0"
+                    ),  # Will be converted to multiplier in calculation
+                    travel_spending=Decimal("10.0"),
+                    food_spending=Decimal("15.0"),
+                    leisure_spending=Decimal("10.0"),
+                )
+                # Store the actual choices in a way we can retrieve them
+                # We'll use the spending_data dict directly in calculation
+            else:
+                # Option 2: Save as percentages
+                SpendingPreference.objects.create(
+                    user=request.user,
+                    housing_spending=Decimal(str(spending_data.get("housing", 30.0))),
+                    travel_spending=Decimal(str(spending_data.get("travel", 10.0))),
+                    food_spending=Decimal(str(spending_data.get("food", 15.0))),
+                    leisure_spending=Decimal(str(spending_data.get("leisure", 10.0))),
+                )
 
             # Generate costs deterministically using COLI
             # Costs increase by 3% annually (inflation)
@@ -737,79 +764,130 @@ class FinancialInformationView(LoginRequiredMixin, View):
             current_label = None
             base_year = None  # Track the first year to calculate annual 3% increases
 
+            # Build a location lookup map from location_data for faster access
+            location_map = {}
+            if spending_mode == "location_based" and location_data:
+                for loc in location_data:
+                    for year in range(loc["startYear"], loc["endYear"] + 1):
+                        location_map[year] = {
+                            "state": loc.get("state"),
+                            "areaLevel": loc.get("areaLevel", "average"),
+                        }
+
             for year_data in income_data:
                 # Set base year to first year in the data
                 if base_year is None:
                     base_year = year_data["year"]
-                # Find location for this year
-                location_pref = LocationPreference.objects.filter(
-                    user=request.user,
-                    start_year__lte=year_data["year"],
-                    end_year__gte=year_data["year"],
-                ).first()
 
-                if location_pref:
-                    label = location_pref.location
-                    if current_label != label:
-                        current_label = label
-                    try:
-                        state = label.split(" (")[0]
-                        area_level = label[
-                            label.find("(") + 1 : label.find(")")
-                        ].replace(" ", "_")
-                    except Exception:
-                        state = label
-                        area_level = "average"
+                # Calculate costs based on mode
+                if spending_mode == "location_based":
+                    # Option 1: Location-based with multiplier system
+                    # Use location_data directly instead of querying database
+                    year = year_data["year"]
+                    location_info = location_map.get(year)
 
-                    state_index = (
-                        COLI_BY_STATE_2024.get(
-                            state, COLI_BY_STATE_2024.get("United States", 100.0)
+                    if location_info:
+                        state = location_info["state"]
+                        area_level = location_info["areaLevel"]
+                        label = f"{state} ({area_level.replace('_', ' ')})"
+                        if current_label != label:
+                            current_label = label
+
+                        state_index = (
+                            COLI_BY_STATE_2024.get(
+                                state, COLI_BY_STATE_2024.get("United States", 100.0)
+                            )
+                            / 100.0
                         )
-                        / 100.0
-                    )
-                    area_mult = AREA_LEVEL_MULTIPLIER.get(area_level, 1.0)
+                        area_mult = AREA_LEVEL_MULTIPLIER.get(area_level, 1.0)
 
-                    base_cost = BASE_US_AVG * state_index * area_mult
+                        # Use old multiplier system with location adjustments
+                        h = SPENDING_MULTIPLIER.get(
+                            spending_data.get("housing", "average"), 1.0
+                        )
+                        t = SPENDING_MULTIPLIER.get(
+                            spending_data.get("travel", "average"), 1.0
+                        )
+                        f = SPENDING_MULTIPLIER.get(
+                            spending_data.get("food", "average"), 1.0
+                        )
+                        leisure_mult = SPENDING_MULTIPLIER.get(
+                            spending_data.get("leisure", "average"), 1.0
+                        )
 
-                    # Spending preferences weighted multiplier
-                    h = SPENDING_MULTIPLIER.get(
-                        spending_data.get("housing", "average"), 1.0
-                    )
-                    t = SPENDING_MULTIPLIER.get(
-                        spending_data.get("travel", "average"), 1.0
-                    )
-                    f = SPENDING_MULTIPLIER.get(
-                        spending_data.get("food", "average"), 1.0
-                    )
-                    leisure_mult = SPENDING_MULTIPLIER.get(
-                        spending_data.get("leisure", "average"), 1.0
-                    )
+                        weighted_mult = (
+                            h * SPENDING_WEIGHTS["housing"]
+                            + t * SPENDING_WEIGHTS["travel"]
+                            + f * SPENDING_WEIGHTS["food"]
+                            + leisure_mult * SPENDING_WEIGHTS["leisure"]
+                        )
 
-                    weighted_mult = (
-                        h * SPENDING_WEIGHTS["housing"]
-                        + t * SPENDING_WEIGHTS["travel"]
-                        + f * SPENDING_WEIGHTS["food"]
-                        + leisure_mult * SPENDING_WEIGHTS["leisure"]
-                    )
+                        base_cost = BASE_US_AVG * state_index * area_mult
+                        final_cost = float(base_cost * weighted_mult)
+                        location_str = label
+                    else:
+                        # No location found - use national average
+                        h = SPENDING_MULTIPLIER.get(
+                            spending_data.get("housing", "average"), 1.0
+                        )
+                        t = SPENDING_MULTIPLIER.get(
+                            spending_data.get("travel", "average"), 1.0
+                        )
+                        f = SPENDING_MULTIPLIER.get(
+                            spending_data.get("food", "average"), 1.0
+                        )
+                        leisure_mult = SPENDING_MULTIPLIER.get(
+                            spending_data.get("leisure", "average"), 1.0
+                        )
 
-                    final_cost = float(base_cost * weighted_mult)
+                        weighted_mult = (
+                            h * SPENDING_WEIGHTS["housing"]
+                            + t * SPENDING_WEIGHTS["travel"]
+                            + f * SPENDING_WEIGHTS["food"]
+                            + leisure_mult * SPENDING_WEIGHTS["leisure"]
+                        )
+
+                        state_index = (
+                            COLI_BY_STATE_2024.get("United States", 100.0) / 100.0
+                        )
+                        base_cost = BASE_US_AVG * state_index
+                        final_cost = float(base_cost * weighted_mult)
+                        location_str = "Unknown"
+
+                    # Apply inflation multiplier to Option 1 (location-based) costs
+                    years_since_base = year_data["year"] - base_year
+                    inflation_multiplier = Decimal("1.03") ** years_since_base
+                    final_cost = float(Decimal(str(final_cost)) * inflation_multiplier)
                 else:
-                    # If no location found, use national average with average area level
-                    state_index = COLI_BY_STATE_2024.get("United States", 100.0) / 100.0
-                    final_cost = float(BASE_US_AVG * state_index)
+                    # Option 2: Percentage-based (NO location, NO COLI adjustments)
+                    total_spending_pct = (
+                        float(spending_data.get("housing", 30.0))
+                        + float(spending_data.get("travel", 10.0))
+                        + float(spending_data.get("food", 15.0))
+                        + float(spending_data.get("leisure", 10.0))
+                    )
 
-                years_since_base = year_data["year"] - base_year
-                inflation_multiplier = Decimal("1.03") ** years_since_base
-                final_cost = float(Decimal(str(final_cost)) * inflation_multiplier)
+                    # Calculate taxes first to get after-tax income
+                    # Use a default state for tax calculation (taxes still apply, but location doesn't affect spending)
+                    income_float = float(year_data["income"])
+                    tax_info = calculate_total_tax(
+                        income_float, "California"
+                    )  # Default state for tax calc
+                    after_tax_income = tax_info["after_tax_income"]
+
+                    # Calculate cost as percentage of AFTER-TAX income
+                    # NO location adjustment, NO COLI adjustment - just pure percentage
+                    # NO inflation multiplier - cost stays as fixed percentage of income
+                    # (Income growth already accounts for inflation in the projection)
+                    final_cost = float(after_tax_income * (total_spending_pct / 100.0))
+                    location_str = "N/A"  # Not applicable for percentage-based mode
 
                 updated_income_data.append(
                     {
                         "year": year_data["year"],
                         "income": year_data["income"],
                         "costs": final_cost,
-                        "location": location_pref.location
-                        if location_pref
-                        else "Unknown",
+                        "location": location_str,
                     }
                 )
 
@@ -817,11 +895,16 @@ class FinancialInformationView(LoginRequiredMixin, View):
             for year_data in updated_income_data:
                 # Extract state name from location for tax calculation
                 location_str = year_data["location"]
-                state_name = (
-                    location_str.split(" (")[0]
-                    if " (" in location_str
-                    else location_str
-                )
+
+                # For percentage-based mode, use default state for tax calculation
+                if spending_mode == "percentage_based":
+                    state_name = "California"  # Default state for tax calculation
+                elif " (" in location_str:
+                    state_name = location_str.split(" (")[0]
+                else:
+                    state_name = (
+                        location_str if location_str != "Unknown" else "California"
+                    )
 
                 income_float = float(year_data["income"])
                 tax_info = calculate_total_tax(income_float, state_name)
@@ -887,6 +970,7 @@ class FinancialInformationView(LoginRequiredMixin, View):
                     "success": True,
                     "message": "Results generated and saved successfully",
                     "entries": entries_data,
+                    "spending_mode": spending_mode,  # Include mode to determine which table to show
                 }
             )
 
@@ -1277,6 +1361,10 @@ class ResultsView(LoginRequiredMixin, View):
         return render(request, "financial/results.html", context)
 
     def post(self, request):
+        # Check if this is an AI opinion request
+        if request.POST.get("get_ai_opinion"):
+            return self._handle_ai_opinion(request)
+
         user = self.request.user
         scenario_id = request.POST.get("scenario_id")
 
@@ -1301,6 +1389,135 @@ class ResultsView(LoginRequiredMixin, View):
             messages.error(request, f"Error calculating projection: {str(e)}")
 
         return redirect("results")
+
+    def _handle_ai_opinion(self, request):
+        """Handle AI opinion request"""
+        import os
+        import traceback
+
+        try:
+            from .ai_cost_service import AICostEstimationService
+            from .models import SpendingPreference
+
+            if not os.getenv("OPENAI_API_KEY"):
+                return JsonResponse(
+                    {"success": False, "error": "AI analysis is not configured."}
+                )
+
+            income_entries_qs = IncomeEntry.objects.filter(user=request.user).order_by(
+                "year"
+            )
+
+            if not income_entries_qs.exists():
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "No income data found. Please generate income and cost projections first.",
+                    }
+                )
+
+            income_entries = []
+            for entry in income_entries_qs:
+                income_for_calc = (
+                    float(entry.after_tax_income)
+                    if entry.after_tax_income
+                    else float(entry.income_amount)
+                )
+                net_savings_after_tax = (
+                    income_for_calc - float(entry.costs)
+                    if entry.costs
+                    else income_for_calc
+                )
+                savings_rate_after_tax = (
+                    (net_savings_after_tax / income_for_calc * 100)
+                    if income_for_calc > 0
+                    else 0
+                )
+
+                income_entries.append(
+                    {
+                        "year": entry.year,
+                        "income": float(entry.income_amount),
+                        "federal_tax": float(entry.federal_tax or 0),
+                        "state_tax": float(entry.state_tax or 0),
+                        "total_tax": float(entry.total_tax or 0),
+                        "after_tax_income": float(
+                            entry.after_tax_income or entry.income_amount
+                        ),
+                        "costs": float(entry.costs or 0),
+                        "location": entry.location or "Unknown",
+                        "net_savings": net_savings_after_tax,
+                        "savings_rate": savings_rate_after_tax,
+                    }
+                )
+
+            # Determine spending mode from spending preferences
+            spending_pref = SpendingPreference.objects.filter(user=request.user).first()
+            spending_mode = "percentage_based"  # Default
+            if spending_pref:
+                if hasattr(spending_pref, "housing_spending"):
+                    if isinstance(spending_pref.housing_spending, str):
+                        spending_mode = "location_based"
+                    else:
+                        spending_mode = "percentage_based"
+
+            # Get user-provided context about their income
+            income_context = request.POST.get("income_context", "").strip()
+
+            # Generate AI analysis
+            ai_service = AICostEstimationService()
+            result = ai_service.generate_income_cost_analysis(
+                income_entries, spending_mode, income_context=income_context
+            )
+
+            if result["success"]:
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "analysis": result["analysis"],
+                        "model_used": result["model_used"],
+                    }
+                )
+            else:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": result.get("error", "Failed to generate analysis"),
+                    }
+                )
+
+        except Exception as e:
+            import logging
+            import traceback
+
+            logger = logging.getLogger(__name__)
+            error_trace = traceback.format_exc()
+            logger.error(f"Error generating AI opinion: {str(e)}\n{error_trace}")
+
+            # Provide more user-friendly error messages
+            error_msg = str(e)
+            if "AuthenticationError" in str(type(e)) or "API key" in error_msg.lower():
+                error_msg = "OpenAI API key is not configured or invalid. Please contact support."
+            elif "quota" in error_msg.lower() or "billing" in error_msg.lower():
+                error_msg = "OpenAI API quota exceeded. Please check your OpenAI account billing."
+            elif "rate limit" in error_msg.lower():
+                error_msg = (
+                    "OpenAI API rate limit exceeded. Please try again in a moment."
+                )
+            elif "model" in error_msg.lower() and (
+                "does not exist" in error_msg.lower()
+                or "not have access" in error_msg.lower()
+            ):
+                error_msg = "The AI model is not available or you do not have access. Please try a different model."
+            else:
+                error_msg = f"An unexpected error occurred: {str(e)}"
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": error_msg,
+                }
+            )
 
 
 class ProjectionDetailView(LoginRequiredMixin, View):

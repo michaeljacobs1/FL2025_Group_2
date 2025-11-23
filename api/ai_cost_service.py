@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from decimal import Decimal
 from typing import Any, Dict
 
@@ -262,10 +263,10 @@ Example format:
         self,
         location: str,
         income: float,
-        housing_spending: str,
-        travel_spending: str,
-        food_spending: str,
-        leisure_spending: str,
+        housing_spending,
+        travel_spending,
+        food_spending,
+        leisure_spending,
         previous_cost: float = None,
         year: int = None,
     ) -> Dict[str, Any]:
@@ -368,25 +369,56 @@ Example format:
         self,
         location: str,
         income: float,
-        housing_spending: str,
-        travel_spending: str,
-        food_spending: str,
-        leisure_spending: str,
+        housing_spending,
+        travel_spending,
+        food_spending,
+        leisure_spending,
     ) -> str:
         """Build the prompt for contextual cost estimation"""
 
-        spending_descriptions = {
-            "very_little": "very frugal, minimal spending",
-            "less_than_average": "below average spending habits",
-            "average": "average spending habits",
-            "above_average": "above average spending habits",
-            "very_high": "very high spending, luxury lifestyle",
-        }
+        # Convert percentages to descriptive text
+        def percentage_to_description(pct):
+            """Convert percentage (float) to descriptive text"""
+            if isinstance(pct, str):
+                # Handle legacy string values
+                spending_descriptions = {
+                    "very_little": "very frugal, minimal spending",
+                    "less_than_average": "below average spending habits",
+                    "average": "average spending habits",
+                    "above_average": "above average spending habits",
+                    "very_high": "very high spending, luxury lifestyle",
+                }
+                return spending_descriptions.get(pct, "average spending habits")
 
-        housing_desc = spending_descriptions.get(housing_spending, "average")
-        travel_desc = spending_descriptions.get(travel_spending, "average")
-        food_desc = spending_descriptions.get(food_spending, "average")
-        leisure_desc = spending_descriptions.get(leisure_spending, "average")
+            # Convert percentage to description
+            pct_float = float(pct)
+            if pct_float < 10:
+                return "very frugal, minimal spending"
+            elif pct_float < 20:
+                return "below average spending habits"
+            elif pct_float < 35:
+                return "average spending habits"
+            elif pct_float < 50:
+                return "above average spending habits"
+            else:
+                return "very high spending, luxury lifestyle"
+
+        housing_desc = percentage_to_description(housing_spending)
+        travel_desc = percentage_to_description(travel_spending)
+        food_desc = percentage_to_description(food_spending)
+        leisure_desc = percentage_to_description(leisure_spending)
+
+        # Also include the actual percentages in the prompt
+        housing_pct = (
+            float(housing_spending) if not isinstance(housing_spending, str) else "N/A"
+        )
+        travel_pct = (
+            float(travel_spending) if not isinstance(travel_spending, str) else "N/A"
+        )
+        food_pct = float(food_spending) if not isinstance(food_spending, str) else "N/A"
+        leisure_pct = (
+            float(leisure_spending) if not isinstance(leisure_spending, str) else "N/A"
+        )
 
         return f"""
 Please provide realistic annual living costs for someone living in {location} with an annual income of ${income:,.2f}.
@@ -397,11 +429,11 @@ IMPORTANT: Consider the significant cost differences between locations. {locatio
 - Lower-cost areas (Phoenix, Dallas, Atlanta): 20-30% lower costs
 - International locations: Consider currency, local economy, and cost of living
 
-Spending preferences:
-- Housing: {housing_desc} (consider local housing market prices)
-- Travel: {travel_desc} (factor in local transportation costs and travel opportunities)
-- Food & Groceries: {food_desc} (account for local food prices and dining culture)
-- Leisure: {leisure_desc} (consider local entertainment costs and lifestyle)
+Spending preferences (as percentage of income):
+- Housing: {housing_desc} ({housing_pct}% of income - consider local housing market prices)
+- Travel: {travel_desc} ({travel_pct}% of income - factor in local transportation costs and travel opportunities)
+- Food & Groceries: {food_desc} ({food_pct}% of income - account for local food prices and dining culture)
+- Leisure: {leisure_desc} ({leisure_pct}% of income - consider local entertainment costs and lifestyle)
 
 Generate costs that are:
 1. Appropriate for this income level and spending preferences
@@ -458,3 +490,332 @@ Ensure the total_annual_cost is realistic for the income level, location-specifi
         except (json.JSONDecodeError, ValueError, IndexError) as e:
             logger.error(f"Error parsing contextual AI response: {str(e)}")
             return {"total_annual_cost": Decimal("0")}
+
+    def generate_income_cost_analysis(
+        self,
+        income_entries: list,
+        spending_mode: str = "percentage_based",
+        income_context: str = "",
+    ) -> Dict[str, Any]:
+        """
+        Generate AI analysis of income and costs over time
+
+        Args:
+            income_entries: List of dictionaries containing year, income, costs, location, etc.
+            spending_mode: Either "location_based" or "percentage_based"
+            income_context: Optional user-provided context about their job/career/income situation
+
+        Returns:
+            Dictionary containing AI analysis and metadata
+        """
+        try:
+            prompt = self._build_income_cost_prompt(
+                income_entries, spending_mode, income_context=income_context
+            )
+
+            if not prompt or prompt == "No income data provided.":
+                return {
+                    "success": False,
+                    "error": "No income data available for analysis.",
+                    "analysis": "",
+                    "model_used": self.model,
+                }
+
+            # Build request parameters
+            request_params = {
+                "model": self.model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a financial planning expert specializing in income and expense analysis. Provide insightful, actionable analysis of financial projections over time. Focus on trends, potential concerns, and recommendations. Be concise but comprehensive.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            }
+
+            # Set token limit based on model type
+            if "gpt-5-nano" in self.model.lower():
+                request_params["max_completion_tokens"] = 4000
+            else:
+                request_params["max_tokens"] = 2000
+                request_params["temperature"] = 0.7
+
+            response = openai.ChatCompletion.create(**request_params)
+
+            # Extract response content
+            ai_response = None
+            if hasattr(response, "choices") and response.choices:
+                if hasattr(response.choices[0], "message"):
+                    if hasattr(response.choices[0].message, "content"):
+                        ai_response = response.choices[0].message.content
+
+            if ai_response is None or not str(ai_response).strip():
+                return {
+                    "success": False,
+                    "error": "AI returned an empty response. Please try again.",
+                    "analysis": "",
+                    "model_used": self.model,
+                }
+
+            return {
+                "success": True,
+                "analysis": str(ai_response).strip(),
+                "model_used": self.model,
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating AI income/cost analysis: {str(e)}")
+            import traceback
+
+            logger.error(traceback.format_exc())
+
+            error_msg = str(e)
+            if "AuthenticationError" in str(type(e)) or "Invalid API key" in error_msg:
+                error_msg = "OpenAI API key is not configured or invalid. Please contact support."
+            elif "quota" in error_msg.lower() or "billing" in error_msg.lower():
+                error_msg = "OpenAI API quota exceeded. Please check your OpenAI account billing."
+            elif "rate limit" in error_msg.lower():
+                error_msg = (
+                    "OpenAI API rate limit exceeded. Please try again in a moment."
+                )
+
+            return {
+                "success": False,
+                "error": error_msg,
+                "analysis": "",
+                "model_used": self.model,
+            }
+
+    def _build_income_cost_prompt(
+        self,
+        income_entries: list,
+        spending_mode: str,
+        income_context: str = "",
+    ) -> str:
+        """Build the prompt for income and cost analysis"""
+
+        total_years = len(income_entries)
+        if total_years == 0:
+            return "No income data provided."
+
+        first_year = income_entries[0]
+        last_year = income_entries[-1]
+
+        initial_income = float(
+            first_year.get("after_tax_income", first_year.get("income", 0)) or 0
+        )
+        final_income = float(
+            last_year.get("after_tax_income", last_year.get("income", 0)) or 0
+        )
+        income_growth = (
+            ((final_income - initial_income) / initial_income * 100)
+            if initial_income > 0
+            else 0
+        )
+
+        initial_costs = float(first_year.get("costs", 0) or 0)
+        final_costs = float(last_year.get("costs", 0) or 0)
+        cost_growth = (
+            ((final_costs - initial_costs) / initial_costs * 100)
+            if initial_costs > 0
+            else 0
+        )
+
+        avg_savings_rate = (
+            sum(entry.get("savings_rate", 0) for entry in income_entries) / total_years
+            if total_years > 0
+            else 0
+        )
+
+        locations = set()
+        for entry in income_entries:
+            loc = entry.get("location", "Unknown")
+            if loc and loc != "N/A" and loc != "Unknown":
+                locations.add(loc)
+
+        # Build detailed year-by-year data with annual changes
+        mode_name = (
+            "Location-Based"
+            if spending_mode == "location_based"
+            else "Percentage-Based"
+        )
+
+        data_summary = "\nYear-by-Year Financial Data:\n"
+        data_summary += "=" * 100 + "\n"
+
+        previous_income = None
+        previous_costs = None
+        previous_savings = None
+
+        for entry in income_entries:
+            year = entry.get("year", "N/A")
+            income = float(entry.get("after_tax_income", entry.get("income", 0)) or 0)
+            costs = float(entry.get("costs", 0) or 0)
+            net_savings = float(entry.get("net_savings", income - costs) or 0)
+            savings_rate = float(entry.get("savings_rate", 0) or 0)
+            location = entry.get("location", "N/A")
+
+            income_change = None
+            income_change_pct = None
+            costs_change = None
+            costs_change_pct = None
+            savings_change = None
+            savings_change_pct = None
+
+            if previous_income is not None:
+                income_change = income - previous_income
+                income_change_pct = (
+                    (income_change / previous_income * 100)
+                    if previous_income > 0
+                    else 0
+                )
+                costs_change = costs - previous_costs
+                costs_change_pct = (
+                    (costs_change / previous_costs * 100) if previous_costs > 0 else 0
+                )
+                savings_change = net_savings - previous_savings
+                savings_change_pct = (
+                    (savings_change / previous_savings * 100)
+                    if previous_savings != 0
+                    else 0
+                )
+
+            data_summary += f"\nYear {year}:\n"
+            data_summary += f"  After-Tax Income: ${income:,.0f}"
+            if income_change is not None:
+                change_indicator = (
+                    "↑" if income_change > 0 else "↓" if income_change < 0 else "→"
+                )
+                data_summary += f" ({change_indicator} ${abs(income_change):,.0f}, {income_change_pct:+.1f}% from previous year)\n"
+            else:
+                data_summary += " (baseline year)\n"
+
+            data_summary += f"  Costs: ${costs:,.0f}"
+            if costs_change is not None:
+                change_indicator = (
+                    "↑" if costs_change > 0 else "↓" if costs_change < 0 else "→"
+                )
+                data_summary += f" ({change_indicator} ${abs(costs_change):,.0f}, {costs_change_pct:+.1f}% from previous year)\n"
+            else:
+                data_summary += " (baseline year)\n"
+
+            data_summary += (
+                f"  Net Savings: ${net_savings:,.0f} ({savings_rate:.1f}% savings rate)"
+            )
+            if savings_change is not None:
+                change_indicator = (
+                    "↑" if savings_change > 0 else "↓" if savings_change < 0 else "→"
+                )
+                data_summary += f" ({change_indicator} ${abs(savings_change):,.0f}, {savings_change_pct:+.1f}% from previous year)\n"
+            else:
+                data_summary += " (baseline year)\n"
+
+            if location and location != "N/A" and location != "Unknown":
+                data_summary += f"  Location: {location}\n"
+
+            previous_income = income
+            previous_costs = costs
+            previous_savings = net_savings
+
+        mode_description = (
+            "location-based with cost of living adjustments"
+            if spending_mode == "location_based"
+            else "percentage-based (fixed percentage of after-tax income)"
+        )
+
+        # Add user context if provided
+        context_section = ""
+        if income_context:
+            context_section = f"""
+
+CRITICAL: User-Provided Context About Their Income Situation:
+"{income_context}"
+
+YOU MUST USE THIS CONTEXT to explain why the income numbers are what they are. Reference specific dollar amounts and percentages from the data below, and connect them to the user's job, career stage, industry, or other factors mentioned in the context above. For example, if they mention expecting a promotion in year 3, look at the income jump in that year and explain it using their context."""
+
+        prompt = f"""You are a financial analyst. Analyze the following financial projection data and provide a comprehensive, QUANTITATIVE year-by-year analysis. You MUST reference specific dollar amounts, percentages, and numbers from the data below.
+
+**Projection Period**: {first_year.get("year", "N/A")} to {last_year.get("year", "N/A")} ({total_years} years)
+
+**Calculation Method**: {mode_name} ({mode_description})
+
+{context_section}
+
+**Summary Statistics** (USE THESE NUMBERS IN YOUR ANALYSIS):
+- Initial After-Tax Income: ${initial_income:,.0f}
+- Final After-Tax Income: ${final_income:,.0f}
+- Total Income Growth: {income_growth:.1f}% over {total_years} years
+- Initial Costs: ${initial_costs:,.0f}
+- Final Costs: ${final_costs:,.0f}
+- Total Cost Growth: {cost_growth:.1f}% over {total_years} years
+- Average Savings Rate: {avg_savings_rate:.1f}%
+
+**Locations**: {", ".join(locations) if locations else "N/A (Percentage-based calculation)"}
+
+{data_summary}
+
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
+
+1. ALWAYS cite specific numbers from the data below (e.g., "In Year 2025, income increased from $X to $Y, a Z% increase").
+2. Reference dollar amounts explicitly - don't just say "income increased", say "income increased from $75,000 to $82,500".
+3. Calculate and mention percentages - show the math (e.g., "This represents a 10% increase").
+4. If context was provided above, you MUST reference it when explaining income patterns. For example: "The income jump from $X to $Y in Year 2026 aligns with your mention of expecting a promotion that year."
+5. DO NOT use markdown formatting (no **, no ##, no bold). Write in plain text only.
+
+Provide a detailed year-by-year analysis:
+
+1. Annual Income Changes (CITE SPECIFIC DOLLAR AMOUNTS AND PERCENTAGES):
+   - For EACH year, state the exact after-tax income amount and the dollar/percentage change from the previous year
+   - Example format: "Year 2025: Income is $X, which is $Y higher/lower than Year 2024 (a Z% increase/decrease)"
+   - Explain whether income growth is accelerating, decelerating, or stable using the numbers
+   - Compare income changes to typical career progression or inflation (cite percentages)
+   - If context was provided, explain how the user's job/career situation relates to these specific income numbers
+
+2. Annual Cost Changes (CITE SPECIFIC DOLLAR AMOUNTS AND PERCENTAGES):
+   - For EACH year, state the exact cost amount and the dollar/percentage change from the previous year
+   - Example format: "Year 2025: Costs are $X, which is $Y higher/lower than Year 2024 (a Z% increase/decrease)"
+   - Compare cost growth rate to income growth rate using percentages
+   - Identify when costs are outpacing income growth and by how much (show the math)
+   - Explain factors driving cost changes (location changes, inflation, lifestyle) using the numbers
+
+3. Annual Savings Changes (CITE SPECIFIC DOLLAR AMOUNTS AND PERCENTAGES):
+   - For EACH year, state the exact net savings amount and savings rate percentage
+   - Show how the gap between income and costs is changing in dollar terms
+   - Calculate and state the impact: "Savings increased by $X (Y%) this year because income grew Z% while costs only grew W%"
+
+4. Trends and Patterns (USE NUMBERS TO SUPPORT YOUR ANALYSIS):
+   - Identify periods of rapid income growth with specific examples: "Years 2025-2027 show income growth of X%, Y%, and Z% respectively"
+   - Identify concerning periods with numbers: "In Year 2026, costs grew X% while income only grew Y%, reducing savings by $Z"
+   - Quantify the overall trajectory: "Over the projection period, income grew X% while costs grew Y%, resulting in..."
+
+5. Key Insights (CONNECT NUMBERS TO MEANING):
+   - Identify the best and worst years with specific dollar amounts and percentages
+   - Explain concerning trends with numbers: "In Year X, savings dropped to $Y (Z% of income) because..."
+   - Assess whether income growth is keeping pace: "Income grew X% over the period while costs grew Y%, meaning..."
+   - If context was provided, connect these insights to the user's career/job situation
+
+6. Recommendations (BE SPECIFIC WITH NUMBERS):
+   - Suggest specific dollar amounts to save in challenging years
+   - Reference the numbers: "In Year 2025, if you could reduce costs by $X (Y%), you'd increase savings by $Z"
+   - If context was provided, give career-specific recommendations: "Given your mention of [context], consider [action] which could increase income by approximately X% based on industry standards"
+
+REMEMBER: Always cite specific numbers, dollar amounts, and percentages. Never make vague statements. If context was provided, you MUST reference it when explaining income patterns. Make the analysis quantitative and data-driven. DO NOT use markdown formatting - write in plain text only."""
+
+        return prompt
+
+    @staticmethod
+    def strip_markdown(text: str) -> str:
+        """Remove markdown formatting from text"""
+        if not text:
+            return text
+        # Remove **bold** and *italic*
+        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+        text = re.sub(r"\*(.*?)\*", r"\1", text)
+        # Remove # headers
+        text = re.sub(r"#+\s*(.*?)(?:\n|$)", r"\1\n", text)
+        # Remove `code`
+        text = re.sub(r"`(.*?)`", r"\1", text)
+        # Remove __bold__ and _italic_ (alternative markdown)
+        text = re.sub(r"__(.*?)__", r"\1", text)
+        text = re.sub(r"_(.*?)_", r"\1", text)
+        return text
