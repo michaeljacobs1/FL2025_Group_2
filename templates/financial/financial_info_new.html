@@ -5,7 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Information - {{ user.username }}</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link rel="stylesheet" href="{% static 'styles.css' %}?v=2.1">
+    <!-- Template version: 2.1 - Percentage inputs for spending preferences -->
+    <script>
+        console.log('Template version 2.1 loaded - Using percentage inputs for spending preferences');
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -85,12 +89,12 @@
                     <!-- Step Divider -->
                     <div class="step-divider"></div>
 
-                    <!-- Step 2: Location & Spending Preferences -->
+                    <!-- Step 2: Mode Selection & Preferences -->
                     <div class="step-section step-section-2">
                         <div class="card-header">
                             <div class="step-indicator">
                                 <span class="step-number">Step 2</span>
-                                <h3>Location &amp; Spending Preferences</h3>
+                                <h3>Spending Preferences</h3>
                             </div>
                         </div>
 
@@ -98,70 +102,142 @@
                         <form method="post" id="locationSpendingForm" class="pretty-form">
                             {% csrf_token %}
                             
-                            <!-- Location Section -->
+                            <!-- Mode Selection -->
                             <div class="section-header">
-                                <h4>Where Will You Live?</h4>
-                                <p class="section-description">Add locations and specify how many years you'll live in each place</p>
+                                <h4>Choose Your Input Method</h4>
+                                <p class="section-description">Select how you want to specify your spending preferences</p>
                             </div>
-
-                            <div id="locationContainer"></div>
                             
-                            <div class="location-controls">
-                                <button type="button" id="addLocation" class="btn-secondary">
-                                    <i class="fas fa-plus"></i> Add Another Location
-                                </button>
-                                <div class="year-validation" id="yearValidation">
-                                    <span class="validation-text">Total years: <span id="totalYears">0</span> / <span id="requiredYears">0</span></span>
-                                    <span class="validation-status" id="validationStatus"></span>
+                            <div class="mode-selection" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                                <div class="mode-option" id="modeOption1" style="border: 2px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; cursor: pointer; transition: all 0.3s; user-select: none;" role="button" tabindex="0" onclick="selectMode(1)" onkeydown="if(event.key==='Enter'||event.key===' '){selectMode(1);event.preventDefault();}">
+                                    <input type="radio" name="spending_mode" id="mode1" value="location_based" style="display: none;">
+                                    <div style="pointer-events: none;">
+                                        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Option 1: Location-Based</h4>
+                                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Use location-specific cost of living adjustments with average spending preferences</p>
+                                        <ul style="margin: 0.75rem 0 0 0; padding-left: 1.25rem; color: #4b5563; font-size: 0.85rem;">
+                                            <li>Select locations where you'll live</li>
+                                            <li>Choose spending level (Very Little to Very High)</li>
+                                            <li>Costs adjusted by location's cost of living</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="mode-option" id="modeOption2" style="border: 2px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; cursor: pointer; transition: all 0.3s; user-select: none;" role="button" tabindex="0" onclick="selectMode(2)" onkeydown="if(event.key==='Enter'||event.key===' '){selectMode(2);event.preventDefault();}">
+                                    <input type="radio" name="spending_mode" id="mode2" value="percentage_based" style="display: none;">
+                                    <div style="pointer-events: none;">
+                                        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Option 2: Percentage-Based</h4>
+                                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Specify exact percentages of your after-tax income for each category</p>
+                                        <ul style="margin: 0.75rem 0 0 0; padding-left: 1.25rem; color: #4b5563; font-size: 0.85rem;">
+                                            <li>Enter percentage of income for each category</li>
+                                            <li>No location selection needed</li>
+                                            <li>More precise control over spending</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
+                            
+                            <!-- Option 1: Location-Based Section -->
+                            <div id="option1Section" style="display: none;">
+                                <!-- Location Section -->
+                                <div class="section-header">
+                                    <h4>Where Will You Live?</h4>
+                                    <p class="section-description">Add locations and specify how many years you'll live in each place</p>
+                                </div>
 
-                            <!-- Spending Preferences Section -->
-                            <div class="section-header">
-                                <h4>Spending Preferences</h4>
-                                <p class="section-description">Rate your spending habits for each category</p>
+                                <div id="locationContainer"></div>
+                                
+                                <div class="location-controls">
+                                    <button type="button" id="addLocation" class="btn-secondary">
+                                        <i class="fas fa-plus"></i> Add Another Location
+                                    </button>
+                                    <div class="year-validation" id="yearValidation">
+                                        <span class="validation-text">Total years: <span id="totalYears">0</span> / <span id="requiredYears">0</span></span>
+                                        <span class="validation-status" id="validationStatus"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Option 1: Old Spending Preferences (Dropdowns) -->
+                                <div class="section-header" style="margin-top: 2rem;">
+                                    <h4>Spending Preferences</h4>
+                                    <p class="section-description">Rate your spending habits for each category</p>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="housing_spending_dropdown">Housing Spending</label>
+                                        <select class="input" id="housing_spending_dropdown" name="housing_spending_dropdown">
+                                            <option value="very_little">Very Little</option>
+                                            <option value="less_than_average">Less Than Average</option>
+                                            <option value="average" selected>Average</option>
+                                            <option value="above_average">Above Average</option>
+                                            <option value="very_high">Very High</option>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="travel_spending_dropdown">Travel Spending</label>
+                                        <select class="input" id="travel_spending_dropdown" name="travel_spending_dropdown">
+                                            <option value="very_little">Very Little</option>
+                                            <option value="less_than_average">Less Than Average</option>
+                                            <option value="average" selected>Average</option>
+                                            <option value="above_average">Above Average</option>
+                                            <option value="very_high">Very High</option>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="food_spending_dropdown">Food & Groceries</label>
+                                        <select class="input" id="food_spending_dropdown" name="food_spending_dropdown">
+                                            <option value="very_little">Very Little</option>
+                                            <option value="less_than_average">Less Than Average</option>
+                                            <option value="average" selected>Average</option>
+                                            <option value="above_average">Above Average</option>
+                                            <option value="very_high">Very High</option>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="leisure_spending_dropdown">Leisure Spending</label>
+                                        <select class="input" id="leisure_spending_dropdown" name="leisure_spending_dropdown">
+                                            <option value="very_little">Very Little</option>
+                                            <option value="less_than_average">Less Than Average</option>
+                                            <option value="average" selected>Average</option>
+                                            <option value="above_average">Above Average</option>
+                                            <option value="very_high">Very High</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
+                            
+                            <!-- Option 2: Percentage-Based Section -->
+                            <div id="option2Section" style="display: none;">
+                                <!-- Spending Preferences Section -->
+                                <div class="section-header">
+                                    <h4>Spending Preferences</h4>
+                                    <p class="section-description">Enter the percentage of your after-tax income you plan to spend in each category</p>
+                                </div>
 
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="housing_spending">Housing Spending</label>
-                                    <select class="input" id="housing_spending" name="housing_spending" required>
-                                        <option value="very_little">Very Little</option>
-                                        <option value="less_than_average">Less Than Average</option>
-                                        <option value="average" selected>Average</option>
-                                        <option value="above_average">Above Average</option>
-                                        <option value="very_high">Very High</option>
-                                    </select>
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="housing_spending">Housing Spending (%)</label>
+                                        <input class="input" id="housing_spending" name="housing_spending" type="number" step="0.01" min="0" max="100" placeholder="e.g. 30" value="30">
+                                        <small class="field-help">Percentage of after-tax income for housing</small>
+                                    </div>
+                                    <div class="field">
+                                        <label for="travel_spending">Travel Spending (%)</label>
+                                        <input class="input" id="travel_spending" name="travel_spending" type="number" step="0.01" min="0" max="100" placeholder="e.g. 10" value="10">
+                                        <small class="field-help">Percentage of after-tax income for travel</small>
+                                    </div>
+                                    <div class="field">
+                                        <label for="food_spending">Food & Groceries (%)</label>
+                                        <input class="input" id="food_spending" name="food_spending" type="number" step="0.01" min="0" max="100" placeholder="e.g. 15" value="15">
+                                        <small class="field-help">Percentage of after-tax income for food</small>
+                                    </div>
+                                    <div class="field">
+                                        <label for="leisure_spending">Leisure Spending (%)</label>
+                                        <input class="input" id="leisure_spending" name="leisure_spending" type="number" step="0.01" min="0" max="100" placeholder="e.g. 10" value="10">
+                                        <small class="field-help">Percentage of after-tax income for leisure</small>
+                                    </div>
                                 </div>
-                                <div class="field">
-                                    <label for="travel_spending">Travel Spending</label>
-                                    <select class="input" id="travel_spending" name="travel_spending" required>
-                                        <option value="very_little">Very Little</option>
-                                        <option value="less_than_average">Less Than Average</option>
-                                        <option value="average" selected>Average</option>
-                                        <option value="above_average">Above Average</option>
-                                        <option value="very_high">Very High</option>
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="food_spending">Food & Groceries</label>
-                                    <select class="input" id="food_spending" name="food_spending" required>
-                                        <option value="very_little">Very Little</option>
-                                        <option value="less_than_average">Less Than Average</option>
-                                        <option value="average" selected>Average</option>
-                                        <option value="above_average">Above Average</option>
-                                        <option value="very_high">Very High</option>
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="leisure_spending">Leisure Spending</label>
-                                    <select class="input" id="leisure_spending" name="leisure_spending" required>
-                                        <option value="very_little">Very Little</option>
-                                        <option value="less_than_average">Less Than Average</option>
-                                        <option value="average" selected>Average</option>
-                                        <option value="above_average">Above Average</option>
-                                        <option value="very_high">Very High</option>
-                                    </select>
+                                <div class="spending-total" id="spendingTotal" style="margin-top: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 0.5rem;">
+                                    <strong>Total Spending: <span id="totalSpendingPercent">65.00</span>%</strong>
+                                    <small style="display: block; color: #6b7280; margin-top: 0.25rem;">Remaining: <span id="remainingPercent">35.00</span>% (for savings and other expenses)</small>
                                 </div>
                             </div>
 
@@ -193,8 +269,10 @@
                 </div>
                 <div class="card-content">
                     <p class="section-description">Review and edit your annual income and costs. Values are auto-populated from Step 1 and Step 2.</p>
-                    <div class="table-container">
-                        <table class="table" id="resultsTable">
+                    
+                    <!-- Option 1 Table: Location-Based (with Location column) -->
+                    <div class="table-container" id="tableOption1" style="display: none;">
+                        <table class="table" id="resultsTableOption1">
                             <colgroup>
                                 <col style="width: 16.6667%;">
                                 <col style="width: 16.6667%;">
@@ -213,7 +291,32 @@
                                     <th>Net Savings ($)</th>
                                 </tr>
                             </thead>
-                            <tbody id="resultsTableBody">
+                            <tbody id="resultsTableBodyOption1">
+                                <!-- Table rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Option 2 Table: Percentage-Based (without Location column) -->
+                    <div class="table-container" id="tableOption2" style="display: none;">
+                        <table class="table" id="resultsTableOption2">
+                            <colgroup>
+                                <col style="width: 20%;">
+                                <col style="width: 20%;">
+                                <col style="width: 20%;">
+                                <col style="width: 20%;">
+                                <col style="width: 20%;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Year</th>
+                                    <th>Income ($)</th>
+                                    <th>Costs ($)</th>
+                                    <th>After-Tax Income ($)</th>
+                                    <th>Net Savings ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBodyOption2">
                                 <!-- Table rows will be populated by JavaScript -->
                             </tbody>
                         </table>
@@ -234,6 +337,7 @@
     let locationData = [];
     let totalProjectionYears = 0;
     let startYear = 2025;
+    let selectedMode = null; // 1 = location-based, 2 = percentage-based
 
     // DOM elements
     const startYearEl = document.getElementById('startYear');
@@ -258,6 +362,114 @@
         { value: 'above_average', label: 'Above Average' },
         { value: 'very_high', label: 'Very High' }
     ];
+
+    // Calculate and update total spending percentage
+    function updateSpendingTotal() {
+        const housing = parseFloat(document.getElementById('housing_spending').value) || 0;
+        const travel = parseFloat(document.getElementById('travel_spending').value) || 0;
+        const food = parseFloat(document.getElementById('food_spending').value) || 0;
+        const leisure = parseFloat(document.getElementById('leisure_spending').value) || 0;
+        
+        const total = housing + travel + food + leisure;
+        const remaining = 100 - total;
+        
+        document.getElementById('totalSpendingPercent').textContent = total.toFixed(2);
+        document.getElementById('remainingPercent').textContent = remaining.toFixed(2);
+        
+        // Change color if total exceeds 100%
+        const totalElement = document.getElementById('spendingTotal');
+        if (total > 100) {
+            totalElement.style.background = '#fee2e2';
+            totalElement.style.color = '#991b1b';
+        } else if (total > 90) {
+            totalElement.style.background = '#fef3c7';
+            totalElement.style.color = '#92400e';
+        } else {
+            totalElement.style.background = '#f3f4f6';
+            totalElement.style.color = '#1f2937';
+        }
+    }
+
+    // Mode selection function
+    function selectMode(mode) {
+        selectedMode = mode;
+        
+        // Update radio button
+        const radio = document.getElementById('mode' + mode);
+        if (radio) radio.checked = true;
+        
+        // Update visual selection
+        document.querySelectorAll('.mode-option').forEach(opt => {
+            opt.style.borderColor = '#e5e7eb';
+            opt.style.backgroundColor = '';
+        });
+        const selectedOption = document.getElementById('modeOption' + mode);
+        if (selectedOption) {
+            selectedOption.style.borderColor = '#3b82f6';
+            selectedOption.style.backgroundColor = '#eff6ff';
+        }
+        
+        // Show/hide sections
+        if (mode === 1) {
+            document.getElementById('option1Section').style.display = 'block';
+            document.getElementById('option2Section').style.display = 'none';
+            
+            // Ensure at least one location row exists
+            const locationContainer = document.getElementById('locationContainer');
+            if (locationContainer && locationContainer.querySelectorAll('.location-row').length === 0) {
+                addLocationRow();
+            }
+            
+            // Make location fields required
+            document.querySelectorAll('#option1Section select[name="state[]"], #option1Section select[name="area_level[]"], #option1Section input[name="location_years[]"]').forEach(el => {
+                el.required = true;
+            });
+            // Make dropdown spending fields required
+            ['housing_spending_dropdown', 'travel_spending_dropdown', 'food_spending_dropdown', 'leisure_spending_dropdown'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.required = true;
+            });
+            // Make percentage fields not required
+            ['housing_spending', 'travel_spending', 'food_spending', 'leisure_spending'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.required = false;
+            });
+        } else {
+            document.getElementById('option1Section').style.display = 'none';
+            document.getElementById('option2Section').style.display = 'block';
+            // Make location fields not required
+            document.querySelectorAll('#option1Section select[name="state[]"], #option1Section select[name="area_level[]"], #option1Section input[name="location_years[]"]').forEach(el => {
+                el.required = false;
+            });
+            // Make dropdown spending fields not required
+            ['housing_spending_dropdown', 'travel_spending_dropdown', 'food_spending_dropdown', 'leisure_spending_dropdown'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.required = false;
+            });
+            // Make percentage fields required
+            ['housing_spending', 'travel_spending', 'food_spending', 'leisure_spending'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.required = true;
+            });
+        }
+        
+        // Update button state after mode selection
+        updateYearValidation();
+    }
+
+    // Function to setup spending total calculation
+    function setupSpendingTotalCalculation() {
+        const spendingInputs = ['housing_spending', 'travel_spending', 'food_spending', 'leisure_spending'];
+        spendingInputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', updateSpendingTotal);
+                input.addEventListener('change', updateSpendingTotal);
+            }
+        });
+        // Initial calculation
+        updateSpendingTotal();
+    }
 
     // Load saved form data from database (passed from server)
     function loadSavedDataFromDatabase() {
@@ -320,6 +532,8 @@
                 if (!document.getElementById('leisure_spending').value) {
                     document.getElementById('leisure_spending').value = '{{ spending_preference.leisure_spending }}';
                 }
+                // Update total after loading values
+                updateSpendingTotal();
             {% endif %}
             
             // Load locations from database if not in localStorage
@@ -412,6 +626,24 @@
     }
 
     function updateYearValidation() {
+        // Only validate location years for Option 1 (location-based mode)
+        if (selectedMode !== 1) {
+            // For Option 2, enable button if mode is selected and basic fields are filled
+            if (selectedMode === 2) {
+                const hasIncomeData = startYearEl.value && yearsCountEl.value && baseIncomeEl.value && growthEl.value;
+                const hasSpendingData = document.getElementById('housing_spending')?.value && 
+                                       document.getElementById('travel_spending')?.value &&
+                                       document.getElementById('food_spending')?.value &&
+                                       document.getElementById('leisure_spending')?.value;
+                generateCostsBtn.disabled = !(hasIncomeData && hasSpendingData);
+            } else {
+                // No mode selected yet
+                generateCostsBtn.disabled = true;
+            }
+            return;
+        }
+        
+        // Option 1 validation: check location years
         const locationYears = document.querySelectorAll('.location-years');
         let totalYears = 0;
         
@@ -423,22 +655,28 @@
         // Get current total projection years from the input field
         const currentTotalProjectionYears = parseInt(yearsCountEl.value) || 0;
         
-        document.getElementById('totalYears').textContent = totalYears;
-        document.getElementById('requiredYears').textContent = currentTotalProjectionYears;
+        if (document.getElementById('totalYears')) {
+            document.getElementById('totalYears').textContent = totalYears;
+        }
+        if (document.getElementById('requiredYears')) {
+            document.getElementById('requiredYears').textContent = currentTotalProjectionYears;
+        }
         
         const validationStatus = document.getElementById('validationStatus');
-        if (totalYears === currentTotalProjectionYears) {
-            validationStatus.textContent = '✓ Valid';
-            validationStatus.className = 'validation-status valid';
-            generateCostsBtn.disabled = false;
-        } else if (totalYears > currentTotalProjectionYears) {
-            validationStatus.textContent = 'Too many years';
-            validationStatus.className = 'validation-status invalid';
-            generateCostsBtn.disabled = true;
-        } else {
-            validationStatus.textContent = 'Incomplete';
-            validationStatus.className = 'validation-status warning';
-            generateCostsBtn.disabled = true;
+        if (validationStatus) {
+            if (totalYears === currentTotalProjectionYears && currentTotalProjectionYears > 0) {
+                validationStatus.textContent = '✓ Valid';
+                validationStatus.className = 'validation-status valid';
+                generateCostsBtn.disabled = false;
+            } else if (totalYears > currentTotalProjectionYears) {
+                validationStatus.textContent = 'Too many years';
+                validationStatus.className = 'validation-status invalid';
+                generateCostsBtn.disabled = true;
+            } else {
+                validationStatus.textContent = 'Incomplete';
+                validationStatus.className = 'validation-status warning';
+                generateCostsBtn.disabled = true;
+            }
         }
     }
 
@@ -460,6 +698,14 @@
         }
         // Also update when total years changes
         if (e.target.id === 'yearsCount') {
+            updateYearValidation();
+        }
+        // Update when income fields change (for Option 2)
+        if (['startYear', 'yearsCount', 'baseIncome', 'growthPct'].includes(e.target.id)) {
+            updateYearValidation();
+        }
+        // Update when spending percentage fields change (for Option 2)
+        if (['housing_spending', 'travel_spending', 'food_spending', 'leisure_spending'].includes(e.target.id)) {
             updateYearValidation();
         }
     });
@@ -495,20 +741,24 @@
             return;
         }
 
-        // Validate locations
+        // Get location form elements (needed for both validation and data collection)
         const stateSelects = document.querySelectorAll('select[name="state[]"]');
         const areaSelects = document.querySelectorAll('select[name="area_level[]"]');
         const yearInputs = document.querySelectorAll('input[name="location_years[]"]');
-        let totalLocationYears = 0;
         
-        for (let i = 0; i < yearInputs.length; i++) {
-            const years = parseInt(yearInputs[i].value) || 0;
-            totalLocationYears += years;
-        }
+        // Validate locations (only for Option 1)
+        if (selectedMode === 1) {
+            let totalLocationYears = 0;
+            
+            for (let i = 0; i < yearInputs.length; i++) {
+                const years = parseInt(yearInputs[i].value) || 0;
+                totalLocationYears += years;
+            }
 
-        if (totalLocationYears !== totalYears) {
-            alert(`Location years (${totalLocationYears}) must equal total projection years (${totalYears}).`);
-            return;
+            if (totalLocationYears !== totalYears) {
+                alert(`Location years (${totalLocationYears}) must equal total projection years (${totalYears}).`);
+                return;
+            }
         }
 
         // Save form data
@@ -526,34 +776,69 @@
             });
         }
 
-        // Collect location data
+        // Collect location data (only for Option 1)
         locationData = [];
-        let currentYear = startYear;
-        
-        for (let i = 0; i < stateSelects.length; i++) {
-            const state = stateSelects[i].value.trim();
-            const areaLevel = areaSelects[i].value;
-            const years = parseInt(yearInputs[i].value);
+        if (selectedMode === 1) {
+            let currentYear = startYear;
             
-            if (state && years) {
-                locationData.push({
-                    state: state,
-                    areaLevel: areaLevel,
-                    startYear: currentYear,
-                    endYear: currentYear + years - 1,
-                    years: years
-                });
-                currentYear += years;
+            for (let i = 0; i < stateSelects.length; i++) {
+                const state = stateSelects[i].value.trim();
+                const areaLevel = areaSelects[i].value;
+                const years = parseInt(yearInputs[i].value);
+                
+                if (state && years) {
+                    locationData.push({
+                        state: state,
+                        areaLevel: areaLevel,
+                        startYear: currentYear,
+                        endYear: currentYear + years - 1,
+                        years: years
+                    });
+                    currentYear += years;
+                }
             }
         }
 
-        // Get spending preferences
-        const spendingData = {
-            housing: document.getElementById('housing_spending').value,
-            travel: document.getElementById('travel_spending').value,
-            food: document.getElementById('food_spending').value,
-            leisure: document.getElementById('leisure_spending').value
-        };
+        // Validate mode is selected
+        if (!selectedMode) {
+            alert('Please select an option (Location-Based or Percentage-Based) before generating results.');
+            return;
+        }
+        
+        // Get spending preferences based on selected mode
+        let spendingData = {};
+        if (selectedMode === 1) {
+            // Option 1: Location-based with dropdowns
+            // Validate that location data exists
+            if (locationData.length === 0) {
+                alert('Please add at least one location for Option 1 (Location-Based mode).');
+                return;
+            }
+            
+            spendingData = {
+                mode: 'location_based',
+                housing: document.getElementById('housing_spending_dropdown').value,
+                travel: document.getElementById('travel_spending_dropdown').value,
+                food: document.getElementById('food_spending_dropdown').value,
+                leisure: document.getElementById('leisure_spending_dropdown').value
+            };
+        } else {
+            // Option 2: Percentage-based
+            spendingData = {
+                mode: 'percentage_based',
+                housing: parseFloat(document.getElementById('housing_spending').value) || 0,
+                travel: parseFloat(document.getElementById('travel_spending').value) || 0,
+                food: parseFloat(document.getElementById('food_spending').value) || 0,
+                leisure: parseFloat(document.getElementById('leisure_spending').value) || 0
+            };
+            
+            // Validate total doesn't exceed 100%
+            const totalSpending = spendingData.housing + spendingData.travel + spendingData.food + spendingData.leisure;
+            if (totalSpending > 100) {
+                alert('Total spending cannot exceed 100% of income. Please adjust your spending preferences.');
+                return;
+            }
+        }
 
         // Send data to server and redirect to results
         const formData = new FormData();
@@ -562,6 +847,12 @@
         formData.append('income_data', JSON.stringify(incomeData));
         formData.append('location_data', JSON.stringify(locationData));
         formData.append('spending_data', JSON.stringify(spendingData));
+        
+        // Debug logging
+        console.log('Sending data to server:');
+        console.log('Mode:', selectedMode, 'Spending mode:', spendingData.mode);
+        console.log('Location data:', locationData);
+        console.log('Spending data:', spendingData);
 
         fetch(window.location.href, {
             method: 'POST',
@@ -570,8 +861,9 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Display the editable results table
-                displayResultsTable(data.entries);
+                // Display the editable results table with the appropriate mode
+                const mode = data.spending_mode || spendingData.mode || 'percentage_based';
+                displayResultsTable(data.entries, mode);
                 document.getElementById('resultsTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 const viewResultsBtn = document.getElementById('viewResultsBtn');
                 const viewResultsBtnActive = document.getElementById('viewResultsBtnActive');
@@ -600,16 +892,30 @@
     }
 
     // Display results table with editable fields
-    function displayResultsTable(entries) {
-        const tbody = document.getElementById('resultsTableBody');
+    function displayResultsTable(entries, mode) {
         const resultsSection = document.getElementById('resultsTableSection');
+        const tableOption1 = document.getElementById('tableOption1');
+        const tableOption2 = document.getElementById('tableOption2');
+        const tbodyOption1 = document.getElementById('resultsTableBodyOption1');
+        const tbodyOption2 = document.getElementById('resultsTableBodyOption2');
         
         if (!entries || entries.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
             if (resultsSection) {
                 resultsSection.style.display = 'none';
             }
             return;
+        }
+        
+        // Determine which mode to use
+        const isLocationBased = mode === 'location_based' || mode === 1;
+        
+        // Show/hide appropriate table
+        if (isLocationBased) {
+            if (tableOption1) tableOption1.style.display = 'block';
+            if (tableOption2) tableOption2.style.display = 'none';
+        } else {
+            if (tableOption1) tableOption1.style.display = 'none';
+            if (tableOption2) tableOption2.style.display = 'block';
         }
         
         // Ensure table section is visible
@@ -617,31 +923,55 @@
             resultsSection.style.display = 'block';
         }
         
-        tbody.innerHTML = '';
+        // Clear both table bodies
+        if (tbodyOption1) tbodyOption1.innerHTML = '';
+        if (tbodyOption2) tbodyOption2.innerHTML = '';
+        
+        // Determine which tbody to use
+        const tbody = isLocationBased ? tbodyOption1 : tbodyOption2;
         
         entries.forEach(entry => {
             const row = document.createElement('tr');
             const netSavings = entry.after_tax_income - entry.costs;
             
-            let locationDisplay = entry.location || 'Unknown';
-            if (locationDisplay.includes(' (')) {
-                locationDisplay = locationDisplay.split(' (')[0];
+            if (isLocationBased) {
+                // Option 1: Location-based table (with Location column)
+                let locationDisplay = entry.location || 'Unknown';
+                if (locationDisplay.includes(' (')) {
+                    // Show just the state name (remove area level in parentheses)
+                    locationDisplay = locationDisplay.split(' (')[0];
+                }
+                
+                row.innerHTML = `
+                    <td class="year-cell" style="font-weight: 700 !important; text-align: center !important;">${entry.year}</td>
+                    <td class="location-cell" style="font-weight: 700 !important; text-align: center !important;">${locationDisplay}</td>
+                    <td>
+                        <input type="text" class="editable-income" data-year="${entry.year}" 
+                               value="${formatNumber(entry.income)}" data-numeric-value="${entry.income}">
+                    </td>
+                    <td>
+                        <input type="text" class="editable-costs" data-year="${entry.year}" 
+                               value="${formatNumber(entry.costs)}" data-numeric-value="${entry.costs}">
+                    </td>
+                    <td class="money after-tax-income" data-year="${entry.year}">$${formatNumber(entry.after_tax_income)}</td>
+                    <td class="money net-savings" data-year="${entry.year}">$${formatNumber(netSavings)}</td>
+                `;
+            } else {
+                // Option 2: Percentage-based table (without Location column)
+                row.innerHTML = `
+                    <td class="year-cell" style="font-weight: 700 !important; text-align: center !important;">${entry.year}</td>
+                    <td>
+                        <input type="text" class="editable-income" data-year="${entry.year}" 
+                               value="${formatNumber(entry.income)}" data-numeric-value="${entry.income}">
+                    </td>
+                    <td>
+                        <input type="text" class="editable-costs" data-year="${entry.year}" 
+                               value="${formatNumber(entry.costs)}" data-numeric-value="${entry.costs}">
+                    </td>
+                    <td class="money after-tax-income" data-year="${entry.year}">$${formatNumber(entry.after_tax_income)}</td>
+                    <td class="money net-savings" data-year="${entry.year}">$${formatNumber(netSavings)}</td>
+                `;
             }
-            
-            row.innerHTML = `
-                <td class="year-cell" style="font-weight: 700 !important; text-align: center !important;">${entry.year}</td>
-                <td class="location-cell" style="font-weight: 700 !important; text-align: center !important;">${locationDisplay}</td>
-                <td>
-                    <input type="text" class="editable-income" data-year="${entry.year}" 
-                           value="${formatNumber(entry.income)}" data-numeric-value="${entry.income}">
-                </td>
-                <td>
-                    <input type="text" class="editable-costs" data-year="${entry.year}" 
-                           value="${formatNumber(entry.costs)}" data-numeric-value="${entry.costs}">
-                </td>
-                <td class="money after-tax-income" data-year="${entry.year}">$${formatNumber(entry.after_tax_income)}</td>
-                <td class="money net-savings" data-year="${entry.year}">$${formatNumber(netSavings)}</td>
-            `;
             
             // Add event listeners to recalculate when income or costs change
             const incomeInput = row.querySelector('.editable-income');
@@ -747,7 +1077,12 @@
             if (data.success) {
                 // Keep table visible and update with new data
                 if (data.entries && data.entries.length > 0) {
-                    displayResultsTable(data.entries);
+                    // Determine mode from first entry's location
+                    const firstEntry = data.entries[0];
+                    const detectedMode = (firstEntry.location === "N/A" || !firstEntry.location || firstEntry.location === "Unknown") 
+                        ? 'percentage_based' 
+                        : 'location_based';
+                    displayResultsTable(data.entries, detectedMode);
                     alert('Changes saved successfully! Taxes have been recalculated.');
                 } else {
                     alert('Changes saved successfully!');
@@ -769,10 +1104,10 @@
         yearsCountEl.value = '';
         baseIncomeEl.value = '';
         growthEl.value = '';
-        document.getElementById('housing_spending').value = 'average';
-        document.getElementById('travel_spending').value = 'average';
-        document.getElementById('food_spending').value = 'average';
-        document.getElementById('leisure_spending').value = 'average';
+        document.getElementById('housing_spending').value = '30';
+        document.getElementById('travel_spending').value = '10';
+        document.getElementById('food_spending').value = '15';
+        document.getElementById('leisure_spending').value = '10';
         locationContainer.innerHTML = '';
         addLocationRow();
         updateYearValidation();
@@ -780,6 +1115,12 @@
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
+        // Setup spending total calculation
+        setupSpendingTotalCalculation();
+        
+        // Check button state on page load
+        updateYearValidation();
+        
         // Check if user has saved data in database
         {% if has_saved_data %}
             // Load saved data from database
@@ -798,6 +1139,8 @@
         {% else %}
             // New user - start with empty form
             clearFormData();
+            // Update total after clearing
+            updateSpendingTotal();
         {% endif %}
 
         {% if entries_data_json %}

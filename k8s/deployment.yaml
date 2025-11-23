@@ -68,17 +68,17 @@ spec:
         app: project-draft
     spec:
       containers:
-        - image: investments:release  
-          imagePullPolicy: Never
+        - image: investments:release
+          imagePullPolicy: IfNotPresent
           name: project-draft
           command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
           ports:
             - containerPort: 8000
           env:
             - name: OPENAI_API_KEY
-              value: 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
+              value: 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
             - name: OPENAI_MODEL
-              value: gpt-4.5
+              value: gpt-3.5-turbo
             
 ---
 apiVersion: v1

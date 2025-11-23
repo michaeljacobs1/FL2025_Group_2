@@ -57,7 +57,70 @@
                 </div>
                 <div class="location-legend" id="locationLegend">
                     <!-- Location legend will be populated by JavaScript -->
-                                </div>
+                </div>
+                
+                <!-- Context Section -->
+                <div class="context-section" style="margin-top: 2rem; border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
+                    <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Provide Context (Optional)</h4>
+                    <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 1rem;">
+                        Help the AI understand your situation better by providing context about your job, career, or any factors that explain your income trajectory. This will make the analysis more personalized and relevant.
+                    </p>
+                    <div class="field" style="margin-bottom: 1rem;">
+                        <label for="incomeContext" style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">
+                            Context about your income (e.g., job title, career stage, expected promotions, industry, etc.)
+                        </label>
+                        <textarea 
+                            id="incomeContext" 
+                            name="income_context" 
+                            rows="4" 
+                            placeholder="Example: I'm a software engineer in my mid-career. I expect steady salary increases of 5-8% annually as I gain seniority. I'm planning to transition to a senior role in 2-3 years which should increase my income by 30-40%."
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-family: inherit; font-size: 0.9rem; resize: vertical; min-height: 100px;"
+                        ></textarea>
+                        <small style="display: block; margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem;">
+                            This information will be used to provide more contextual and personalized financial analysis.
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- AI Opinion Section -->
+                <div class="ai-opinion-section" style="margin-top: 2rem; border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
+                    {% csrf_token %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: #1f2937;">Get AI Opinion</h4>
+                        <button type="button" id="getAIOpinionBtn" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-robot"></i>
+                            Get AI Analysis
+                        </button>
+                    </div>
+                    <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 1rem;">
+                        Get an AI-powered analysis of your income and costs over time, including trends, insights, and recommendations.
+                    </p>
+                    
+                    <!-- Loading indicator -->
+                    <div id="aiLoadingIndicator" style="display: none; padding: 1rem; background: #f3f4f6; border-radius: 0.5rem; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div class="spinner" style="border: 3px solid #e5e7eb; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite;"></div>
+                            <span style="color: #4b5563;">Analyzing your financial data...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Error message -->
+                    <div id="aiErrorMessage" style="display: none; padding: 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; color: #991b1b; margin-bottom: 1rem;"></div>
+                    
+                    <!-- AI Analysis Result -->
+                    <div id="aiAnalysisResult" style="display: none; padding: 1.5rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h5 style="margin: 0; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-brain" style="color: #3b82f6;"></i>
+                                AI Analysis
+                            </h5>
+                            <button type="button" id="closeAIAnalysisBtn" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1.25rem; padding: 0.25rem 0.5rem;" title="Close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="aiAnalysisContent" style="color: #374151; line-height: 1.6; white-space: pre-wrap;"></div>
+                    </div>
+                </div>
                             </div>
                             </div>
 
@@ -300,8 +363,13 @@
                     }
                 });
 
+                // Handle location label - if "N/A", don't include location in label
+                const isPercentageBased = location === "N/A" || location === "Unknown";
+                const incomeLabel = isPercentageBased ? "Income" : `Income - ${location}`;
+                const costsLabel = isPercentageBased ? "Costs" : `Costs - ${location}`;
+
                 datasets.push({
-                    label: `Income - ${location}`,
+                    label: incomeLabel,
                     data: incomeDataArray,
                     borderColor: incomeColor,
                     backgroundColor: incomeColor + '20',
@@ -313,7 +381,7 @@
                 });
                 
                 datasets.push({
-                    label: `Costs - ${location}`,
+                    label: costsLabel,
                     data: costsDataArray,
                     borderColor: costsColor,
                     backgroundColor: costsColor + '20',
@@ -349,7 +417,9 @@
                             },
                             title: {
                                 display: true,
-                                text: 'After-Tax Income vs Costs Over Time by Location',
+                                text: sortedLocations.some(loc => loc === "N/A" || loc === "Unknown") 
+                                    ? 'After-Tax Income vs Costs Over Time' 
+                                    : 'After-Tax Income vs Costs Over Time by Location',
                                 font: { size: 16 }
                             },
                             tooltip: {
@@ -358,13 +428,22 @@
                                         const value = Number(context.parsed.y || 0);
                                         const entry = incomeData[context.dataIndex];
                                         const location = entry.location;
+                                        const isPercentageBased = location === "N/A" || location === "Unknown";
                                         
                                         if (context.dataset.label.includes('Costs')) {
-                                            return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
+                                            if (isPercentageBased) {
+                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' (Percentage-based calculation)';
+                                            } else {
+                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
+                                            }
                                         } else {
                                             // Income is after-tax
                                             const gross = entry.gross_income || value;
-                                            return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (After Tax, ${location})`;
+                                            if (isPercentageBased) {
+                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' (After Tax)';
+                                            } else {
+                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (After Tax, ${location})`;
+                                            }
                                         }
                                     }
                                 }
@@ -395,15 +474,37 @@
                 // Create simple location legend
                 const legendContainer = document.getElementById('locationLegend');
                 if (legendContainer) {
-                    let legendHTML = '<div class="location-legend-content"><h4>Location Timeline:</h4><div class="legend-items">';
-                    sortedLocations.forEach((location, index) => {
-                        const years = locationGroups[location].map(e => e.year).sort((a, b) => a - b);
-                        const yearRange = years.length > 1 ? `${years[0]}-${years[years.length-1]}` : years[0];
-                        legendHTML += `<div class="legend-item">
-                            <span class="legend-text">${location} (${yearRange})</span>
-                        </div>`;
-                    });
-                    legendHTML += '</div><div class="legend-note">Blue lines = After-Tax Income, Red dashed lines = Costs (not adjusted by taxes, increases 3% annually)</div></div>';
+                    // Filter out "N/A" locations for the legend
+                    const validLocations = sortedLocations.filter(loc => loc !== "N/A" && loc !== "Unknown");
+                    const hasPercentageBased = sortedLocations.some(loc => loc === "N/A" || loc === "Unknown");
+                    
+                    let legendHTML = '<div class="location-legend-content">';
+                    
+                    if (validLocations.length > 0) {
+                        legendHTML += '<h4>Location Timeline:</h4><div class="legend-items">';
+                        validLocations.forEach((location, index) => {
+                            const years = locationGroups[location].map(e => e.year).sort((a, b) => a - b);
+                            const yearRange = years.length > 1 ? `${years[0]}-${years[years.length-1]}` : years[0];
+                            legendHTML += `<div class="legend-item">
+                                <span class="legend-text">${location} (${yearRange})</span>
+                            </div>`;
+                        });
+                        legendHTML += '</div>';
+                    }
+                    
+                    if (hasPercentageBased) {
+                        if (validLocations.length > 0) {
+                            legendHTML += '<div class="legend-items" style="margin-top: 0.5rem;">';
+                        } else {
+                            legendHTML += '<h4>Calculation Method:</h4><div class="legend-items">';
+                        }
+                        legendHTML += '<div class="legend-item"><span class="legend-text">Percentage-Based Calculation (No location adjustments)</span></div></div>';
+                    }
+                    
+                    const noteText = hasPercentageBased 
+                        ? 'Blue lines = After-Tax Income, Red dashed lines = Costs (Percentage-based, no annual increase applied)'
+                        : 'Blue lines = After-Tax Income, Red dashed lines = Costs (not adjusted by taxes, increases 3% annually)';
+                    legendHTML += `<div class="legend-note">${noteText}</div></div>`;
                     legendContainer.innerHTML = legendHTML;
                 }
             }
@@ -560,6 +661,169 @@
                 });
             }
             {% endif %}
+            
+            // AI Opinion functionality
+            const getAIOpinionBtn = document.getElementById('getAIOpinionBtn');
+            const aiLoadingIndicator = document.getElementById('aiLoadingIndicator');
+            const aiErrorMessage = document.getElementById('aiErrorMessage');
+            const aiAnalysisResult = document.getElementById('aiAnalysisResult');
+            const aiAnalysisContent = document.getElementById('aiAnalysisContent');
+            const closeAIAnalysisBtn = document.getElementById('closeAIAnalysisBtn');
+            
+            // Helper to strip markdown formatting
+            function stripMarkdown(text) {
+                if (!text) return text;
+                return text
+                    .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove **bold**
+                    .replace(/\*(.*?)\*/g, '$1')      // Remove *italic*
+                    .replace(/##+\s*(.*?)(?:\n|$)/g, '$1\n')  // Remove ## headers
+                    .replace(/#+\s*(.*?)(?:\n|$)/g, '$1\n')   // Remove # headers
+                    .replace(/`(.*?)`/g, '$1');       // Remove `code`
+            }
+            
+            // Helper to get CSRF token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            if (getAIOpinionBtn) {
+                getAIOpinionBtn.addEventListener('click', function() {
+                    // Hide previous results/errors
+                    if (aiAnalysisResult) aiAnalysisResult.style.display = 'none';
+                    if (aiErrorMessage) aiErrorMessage.style.display = 'none';
+                    
+                    // Show loading indicator
+                    if (aiLoadingIndicator) aiLoadingIndicator.style.display = 'block';
+                    getAIOpinionBtn.disabled = true;
+                    getAIOpinionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+                    
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                                     document.querySelector('input[name="csrfmiddlewaretoken"]')?.value ||
+                                     getCookie('csrftoken') ||
+                                     '';
+                    
+                    if (!csrfToken) {
+                        console.error('CSRF token not found');
+                        if (aiLoadingIndicator) aiLoadingIndicator.style.display = 'none';
+                        getAIOpinionBtn.disabled = false;
+                        getAIOpinionBtn.innerHTML = '<i class="fas fa-robot"></i> Get AI Analysis';
+                        if (aiErrorMessage) {
+                            aiErrorMessage.textContent = 'CSRF token not found. Please refresh the page and try again.';
+                            aiErrorMessage.style.display = 'block';
+                        }
+                        return;
+                    }
+                    
+                    // Get context input
+                    const incomeContextInput = document.getElementById('incomeContext');
+                    const incomeContext = incomeContextInput ? incomeContextInput.value.trim() : '';
+                    
+                    // Prepare form data
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', csrfToken);
+                    formData.append('get_ai_opinion', '1');
+                    if (incomeContext) {
+                        formData.append('income_context', incomeContext);
+                    }
+                    
+                    // Make request with proper headers
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData,
+                        credentials: 'same-origin'
+                    })
+                    .then(response => {
+                        // Check if response is HTML (error page) instead of JSON
+                        const contentType = response.headers.get('content-type') || '';
+                        if (contentType.includes('text/html')) {
+                            return response.text().then(html => {
+                                console.error('Received HTML instead of JSON. Status:', response.status);
+                                let errorMsg = 'Server returned an error page. ';
+                                if (response.status === 403) {
+                                    errorMsg += 'CSRF token validation failed. Please refresh the page and try again.';
+                                } else if (response.status === 401 || response.status === 302) {
+                                    errorMsg += 'Authentication required. Please log in again.';
+                                } else {
+                                    errorMsg += `HTTP ${response.status}. Check browser console for details.`;
+                                }
+                                throw new Error(errorMsg);
+                            });
+                        }
+                        
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                try {
+                                    const json = JSON.parse(text);
+                                    throw new Error(json.error || `HTTP ${response.status} error`);
+                                } catch (e) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Hide loading indicator
+                        if (aiLoadingIndicator) aiLoadingIndicator.style.display = 'none';
+                        getAIOpinionBtn.disabled = false;
+                        getAIOpinionBtn.innerHTML = '<i class="fas fa-robot"></i> Get AI Analysis';
+                        
+                        if (data.success) {
+                            // Display analysis (strip markdown)
+                            if (aiAnalysisContent && aiAnalysisResult) {
+                                const cleanedAnalysis = stripMarkdown(data.analysis);
+                                aiAnalysisContent.textContent = cleanedAnalysis;
+                                aiAnalysisResult.style.display = 'block';
+                                
+                                // Scroll to analysis
+                                aiAnalysisResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            } else {
+                                console.error('AI analysis elements not found in DOM');
+                            }
+                        } else {
+                            // Display error
+                            const errorMsg = data.error || 'Failed to generate AI analysis. Please try again.';
+                            console.error('AI Analysis Error:', errorMsg);
+                            if (aiErrorMessage) {
+                                aiErrorMessage.textContent = errorMsg;
+                                aiErrorMessage.style.display = 'block';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        if (aiLoadingIndicator) aiLoadingIndicator.style.display = 'none';
+                        getAIOpinionBtn.disabled = false;
+                        getAIOpinionBtn.innerHTML = '<i class="fas fa-robot"></i> Get AI Analysis';
+                        const errorMsg = error.message || 'An error occurred while generating the analysis. Please check the browser console for details.';
+                        if (aiErrorMessage) {
+                            aiErrorMessage.textContent = errorMsg;
+                            aiErrorMessage.style.display = 'block';
+                        }
+                    });
+                });
+            }
+            
+            // Close analysis button
+            if (closeAIAnalysisBtn) {
+                closeAIAnalysisBtn.addEventListener('click', function() {
+                    if (aiAnalysisResult) aiAnalysisResult.style.display = 'none';
+                });
+            }
     </script>
 </body>
 </html>
