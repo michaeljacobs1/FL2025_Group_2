@@ -323,8 +323,7 @@ class PersonalInformationView(LoginRequiredMixin, View):
             ]
         )
 
-        messages.success(request, "Personal information updated successfully!")
-        return redirect("personal_info")
+        return redirect("financial_info")
 
 
 class FinancialInformationView(LoginRequiredMixin, View):
@@ -344,6 +343,21 @@ class FinancialInformationView(LoginRequiredMixin, View):
         spending_preference = SpendingPreference.objects.filter(
             user=request.user
         ).first()
+
+        # Determine spending mode from spending preferences
+        # If location preferences exist, it's location-based (Option 1)
+        # Otherwise, it's percentage-based (Option 2)
+        spending_mode = "percentage_based"  # Default
+        if location_preferences.exists():
+            # If we have location preferences, it's location-based (Option 1)
+            spending_mode = "location_based"
+        elif spending_preference:
+            # Check if it's stored as text (old location-based) or Decimal (new percentage-based)
+            if hasattr(spending_preference, "housing_spending"):
+                if isinstance(spending_preference.housing_spending, str):
+                    spending_mode = "location_based"
+                else:
+                    spending_mode = "percentage_based"
 
         # Determine if user has any saved data
         has_saved_data = income_entries.exists() or location_preferences.exists()
@@ -435,6 +449,7 @@ class FinancialInformationView(LoginRequiredMixin, View):
                 "income_data": income_data,
                 "location_preferences": saved_locations,
                 "spending_preference": spending_preference,
+                "spending_mode": spending_mode,
                 "has_saved_data": has_saved_data,
                 "entries_data_json": json.dumps(
                     entries_data

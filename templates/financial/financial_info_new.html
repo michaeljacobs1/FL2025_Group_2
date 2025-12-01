@@ -5,22 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Information - {{ user.username }}</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}?v=2.1">
+    <link rel="stylesheet" href="{% static 'styles.css' %}?v=2.2">
     <!-- Template version: 2.1 - Percentage inputs for spending preferences -->
+    <style>
+        .negative {
+            color: #dc2626 !important;
+            font-weight: 600;
+        }
+        .money.negative {
+            color: #dc2626 !important;
+        }
+    </style>
     <script>
         console.log('Template version 2.1 loaded - Using percentage inputs for spending preferences');
     </script>
 </head>
-<body>
-    <nav class="navbar">
+<body style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%) !important; background-attachment: fixed !important;">
+    <nav class="navbar" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;">
         <div class="nav-container">
-            <h1 class="nav-brand">Financial Planner</h1>
+            <h1 class="nav-brand" style="color: #ffffff !important;">Financial Planner</h1>
             <div class="nav-links">
-                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
-                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
-                <a href="{% url 'financial_info' %}" class="nav-link active">Financial Info</a>
-                <a href="{% url 'results' %}" class="nav-link">Results</a>
-                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link">Monte Carlo</a>
+                <a href="{% url 'financial_dashboard' %}" class="nav-link" style="color: #e0e7ff !important;">Home</a>
+                <a href="{% url 'personal_info' %}" class="nav-link" style="color: #e0e7ff !important;">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link active" style="color: #ffffff !important; background-color: rgba(255, 255, 255, 0.2) !important;">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link" style="color: #e0e7ff !important;">Results</a>
+                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link" style="color: #e0e7ff !important;">Monte Carlo</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn">Logout</button>
@@ -31,9 +40,9 @@
 
     <main class="main-content">
         <div class="container">
-            <div class="page-header">
-                <h2>Financial Planning</h2>
-                <p>Plan your financial future using Cost-of-Living indexes by state and your spending preferences.</p>
+            <div style="margin-bottom: 2.5rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 700; color: #1e40af; margin: 0 0 0.5rem 0; letter-spacing: -0.02em;">Financial Planning</h1>
+                <p style="font-size: 1.125rem; color: #475569; margin: 0;">Plan your financial future using Cost-of-Living indexes by state and your spending preferences.</p>
             </div>
 
             {% if messages %}
@@ -79,7 +88,7 @@
                                     </div>
                                     <div class="field">
                                         <label for="growthPct">Annual Income Growth (%)</label>
-                                        <input class="input" id="growthPct" type="number" step="0.01" placeholder="e.g. 5" required>
+                                        <input class="input" id="growthPct" type="number" step="0.01" min="0" placeholder="e.g. 5" required>
                                     </div>
                                 </div>
                             </form>
@@ -288,7 +297,7 @@
                                     <th>Income ($)</th>
                                     <th>Costs ($)</th>
                                     <th>After-Tax Income ($)</th>
-                                    <th>Net Savings ($)</th>
+                                    <th>Annual Savings ($)</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBodyOption1">
@@ -313,7 +322,7 @@
                                     <th>Income ($)</th>
                                     <th>Costs ($)</th>
                                     <th>After-Tax Income ($)</th>
-                                    <th>Net Savings ($)</th>
+                                    <th>Annual Savings ($)</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBodyOption2">
@@ -344,6 +353,20 @@
     const yearsCountEl = document.getElementById('yearsCount');
     const baseIncomeEl = document.getElementById('baseIncome');
     const growthEl = document.getElementById('growthPct');
+    
+    // Prevent negative values in growth field
+    if (growthEl) {
+        growthEl.addEventListener('input', function() {
+            if (this.value < 0) {
+                this.value = 0;
+            }
+        });
+        growthEl.addEventListener('change', function() {
+            if (this.value < 0) {
+                this.value = 0;
+            }
+        });
+    }
     const locationContainer = document.getElementById('locationContainer');
     const addLocationBtn = document.getElementById('addLocation');
     const generateCostsBtn = document.getElementById('generateResults');
@@ -452,6 +475,9 @@
                 if (el) el.required = true;
             });
         }
+        
+        // Save mode selection to localStorage
+        localStorage.setItem('selectedSpendingMode', mode.toString());
         
         // Update button state after mode selection
         updateYearValidation();
@@ -954,7 +980,7 @@
                                value="${formatNumber(entry.costs)}" data-numeric-value="${entry.costs}">
                     </td>
                     <td class="money after-tax-income" data-year="${entry.year}">$${formatNumber(entry.after_tax_income)}</td>
-                    <td class="money net-savings" data-year="${entry.year}">$${formatNumber(netSavings)}</td>
+                    <td class="money net-savings ${netSavings < 0 ? 'negative' : ''}" data-year="${entry.year}">$${formatNumber(Math.abs(netSavings))}</td>
                 `;
             } else {
                 // Option 2: Percentage-based table (without Location column)
@@ -969,7 +995,7 @@
                                value="${formatNumber(entry.costs)}" data-numeric-value="${entry.costs}">
                     </td>
                     <td class="money after-tax-income" data-year="${entry.year}">$${formatNumber(entry.after_tax_income)}</td>
-                    <td class="money net-savings" data-year="${entry.year}">$${formatNumber(netSavings)}</td>
+                    <td class="money net-savings ${netSavings < 0 ? 'negative' : ''}" data-year="${entry.year}">$${formatNumber(Math.abs(netSavings))}</td>
                 `;
             }
             
@@ -1025,22 +1051,77 @@
                 const netSavings = afterTaxIncome - currentCosts;
                 
                 const netSavingsCell = row.querySelector('.net-savings');
-                netSavingsCell.textContent = '$' + formatNumber(netSavings);
+                netSavingsCell.textContent = '$' + formatNumber(Math.abs(netSavings));
                 netSavingsCell.className = 'money net-savings ' + (netSavings >= 0 ? 'positive' : 'negative');
                 
-                // Update after-tax income display
+                // Update after-tax income display (always black, no negative styling)
                 const afterTaxCell = row.querySelector('.after-tax-income');
                 afterTaxCell.textContent = '$' + formatNumber(afterTaxIncome);
+                afterTaxCell.className = 'money after-tax-income';
             };
             
             incomeInput.addEventListener('input', updateNetSavings);
             costsInput.addEventListener('input', updateNetSavings);
             
+            // Auto-save on blur (when user leaves the field)
+            let saveTimeout;
+            function autoSave() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    // Trigger save without showing alert
+                    const incomeInputs = document.querySelectorAll('.editable-income');
+                    const costsInputs = document.querySelectorAll('.editable-costs');
+                    const updates = [];
+                    
+                    incomeInputs.forEach(input => {
+                        const year = parseInt(input.dataset.year);
+                        const income = parseFloat(input.value.replace(/,/g, '')) || parseFloat(input.dataset.numericValue) || 0;
+                        const costsInput = document.querySelector(`.editable-costs[data-year="${year}"]`);
+                        const costs = parseFloat(costsInput.value.replace(/,/g, '')) || parseFloat(costsInput.dataset.numericValue) || 0;
+                        
+                        updates.push({
+                            year: year,
+                            income: income,
+                            costs: costs
+                        });
+                    });
+                    
+                    if (updates.length > 0) {
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                        formData.append('update_entries', '1');
+                        formData.append('updates', JSON.stringify(updates));
+                        
+                        fetch(window.location.href, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.entries && data.entries.length > 0) {
+                                // Update the table with saved data
+                                const firstEntry = data.entries[0];
+                                const detectedMode = (firstEntry.location === "N/A" || !firstEntry.location || firstEntry.location === "Unknown") 
+                                    ? 'percentage_based' 
+                                    : 'location_based';
+                                displayResultsTable(data.entries, detectedMode);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Auto-save error:', error);
+                        });
+                    }
+                }, 1000); // Save 1 second after user stops typing
+            }
+            
+            incomeInput.addEventListener('blur', autoSave);
+            costsInput.addEventListener('blur', autoSave);
+            
             tbody.appendChild(row);
         });
     }
     
-    // Save edited values
+    // Save edited values (manual save button)
     const saveEditsBtn = document.getElementById('saveEditsBtn');
     if (saveEditsBtn) {
         saveEditsBtn.addEventListener('click', function() {
@@ -1075,18 +1156,8 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Keep table visible and update with new data
-                if (data.entries && data.entries.length > 0) {
-                    // Determine mode from first entry's location
-                    const firstEntry = data.entries[0];
-                    const detectedMode = (firstEntry.location === "N/A" || !firstEntry.location || firstEntry.location === "Unknown") 
-                        ? 'percentage_based' 
-                        : 'location_based';
-                    displayResultsTable(data.entries, detectedMode);
-                    alert('Changes saved successfully! Taxes have been recalculated.');
-                } else {
-                    alert('Changes saved successfully!');
-                }
+                // Redirect to results page after successful save
+                window.location.href = '{% url "results" %}';
             } else {
                 alert('Error saving changes: ' + data.error);
             }
@@ -1121,6 +1192,17 @@
         // Check button state on page load
         updateYearValidation();
         
+        // Restore mode selection from localStorage if no saved data from database
+        {% if not has_saved_data %}
+            const savedMode = localStorage.getItem('selectedSpendingMode');
+            if (savedMode) {
+                const mode = parseInt(savedMode);
+                if (mode === 1 || mode === 2) {
+                    selectMode(mode);
+                }
+            }
+        {% endif %}
+        
         // Check if user has saved data in database
         {% if has_saved_data %}
             // Load saved data from database
@@ -1147,7 +1229,33 @@
             try {
                 const existingEntries = JSON.parse('{{ entries_data_json|escapejs }}');
                 if (existingEntries && existingEntries.length > 0) {
-                    displayResultsTable(existingEntries);
+                    // Use saved spending mode to display correct table
+                    const savedSpendingMode = '{{ spending_mode|default:"percentage_based" }}';
+                    
+                    // Set selectedMode FIRST based on saved preference, then display table
+                    if (savedSpendingMode === 'location_based') {
+                        selectedMode = 1;
+                        document.getElementById('mode1').checked = true;
+                        document.getElementById('modeOption1').classList.add('selected');
+                        document.getElementById('modeOption1').style.borderColor = '#3b82f6';
+                        document.getElementById('modeOption1').style.backgroundColor = '#eff6ff';
+                        document.getElementById('option1Section').style.display = 'block';
+                        document.getElementById('option2Section').style.display = 'none';
+                        localStorage.setItem('selectedSpendingMode', '1');
+                    } else {
+                        selectedMode = 2;
+                        document.getElementById('mode2').checked = true;
+                        document.getElementById('modeOption2').classList.add('selected');
+                        document.getElementById('modeOption2').style.borderColor = '#3b82f6';
+                        document.getElementById('modeOption2').style.backgroundColor = '#eff6ff';
+                        document.getElementById('option1Section').style.display = 'none';
+                        document.getElementById('option2Section').style.display = 'block';
+                        localStorage.setItem('selectedSpendingMode', '2');
+                    }
+                    
+                    // Now display the table with the correct mode (this will show location column for Option 1, no location for Option 2)
+                    displayResultsTable(existingEntries, savedSpendingMode);
+                    
                     // Enable View Results button if entries exist
                     const viewResultsBtn = document.getElementById('viewResultsBtn');
                     const viewResultsBtnActive = document.getElementById('viewResultsBtnActive');
@@ -1163,6 +1271,54 @@
         
         // Set up auto-save for form fields
         setupFormAutoSave();
+        
+        // Auto-save table data when navigating away
+        window.addEventListener('beforeunload', function() {
+            // Save any pending table edits before leaving
+            const incomeInputs = document.querySelectorAll('.editable-income');
+            if (incomeInputs.length > 0) {
+                const updates = [];
+                incomeInputs.forEach(input => {
+                    const year = parseInt(input.dataset.year);
+                    const income = parseFloat(input.value.replace(/,/g, '')) || parseFloat(input.dataset.numericValue) || 0;
+                    const costsInput = document.querySelector(`.editable-costs[data-year="${year}"]`);
+                    const costs = parseFloat(costsInput.value.replace(/,/g, '')) || parseFloat(costsInput.dataset.numericValue) || 0;
+                    
+                    updates.push({
+                        year: year,
+                        income: income,
+                        costs: costs
+                    });
+                });
+                
+                if (updates.length > 0) {
+                    // Use sendBeacon for reliable saving on page unload
+                    const formData = new FormData();
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                    if (csrfToken) {
+                        formData.append('csrfmiddlewaretoken', csrfToken);
+                        formData.append('update_entries', '1');
+                        formData.append('updates', JSON.stringify(updates));
+                        
+                        // Use sendBeacon if available, otherwise use fetch with keepalive
+                        if (navigator.sendBeacon) {
+                            const blob = new Blob([JSON.stringify({
+                                csrfmiddlewaretoken: csrfToken,
+                                update_entries: '1',
+                                updates: JSON.stringify(updates)
+                            })], { type: 'application/json' });
+                            navigator.sendBeacon(window.location.href, blob);
+                        } else {
+                            fetch(window.location.href, {
+                                method: 'POST',
+                                body: formData,
+                                keepalive: true
+                            }).catch(() => {});
+                        }
+                    }
+                }
+            }
+        });
     });
     </script>
 </body>

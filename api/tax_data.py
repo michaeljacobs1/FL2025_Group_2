@@ -374,12 +374,12 @@ def calculate_state_tax(income: float, state: str) -> float:
 
 def calculate_total_tax(income: float, state: str) -> dict:
     """
-    Calculate both federal and state taxes
-    Returns a dictionary with federal_tax, state_tax, and total_tax
+    Calculate only federal taxes (state taxes are ignored)
+    Returns a dictionary with federal_tax, state_tax (always 0), and total_tax (federal only)
     """
     federal_tax = calculate_federal_tax(income)
-    state_tax = calculate_state_tax(income, state)
-    total_tax = federal_tax + state_tax
+    state_tax = 0.0  # State taxes are not calculated
+    total_tax = federal_tax  # Only federal tax is used
 
     return {
         "federal_tax": federal_tax,
