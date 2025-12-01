@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monte Carlo Simulation - {{ user.username }}</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link rel="stylesheet" href="{% static 'styles.css' %}?v=2.2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .comparison-table tbody tr {
@@ -32,18 +32,150 @@
         .form-group:hover {
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
+        
+        /* Monte Carlo Explanation Modal */
+        .mc-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .mc-modal-overlay.show {
+            display: flex;
+        }
+        
+        .mc-modal {
+            background: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideUp 0.3s ease;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .mc-modal-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 1rem 1rem 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .mc-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .mc-modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+        }
+        
+        .mc-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .mc-modal-content {
+            padding: 2rem;
+        }
+        
+        .mc-modal-content h3 {
+            color: #1e40af;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.75rem 0;
+        }
+        
+        .mc-modal-content h3:first-child {
+            margin-top: 0;
+        }
+        
+        .mc-modal-content p {
+            color: #475569;
+            line-height: 1.7;
+            margin: 0 0 1rem 0;
+        }
+        
+        .mc-modal-content ul {
+            color: #475569;
+            line-height: 1.8;
+            margin: 0.5rem 0 1rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .mc-modal-content li {
+            margin: 0.5rem 0;
+        }
+        
+        .mc-modal-footer {
+            padding: 1.5rem 2rem;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
-<body>
-    <nav class="navbar">
+<body style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%) !important; background-attachment: fixed !important;">
+    <nav class="navbar" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;">
         <div class="nav-container">
-            <h1 class="nav-brand">Financial Planner</h1>
+            <h1 class="nav-brand" style="color: #ffffff !important;">Financial Planner</h1>
             <div class="nav-links">
-                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
-                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
-                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
-                <a href="{% url 'results' %}" class="nav-link">Results</a>
-                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link active">Monte Carlo</a>
+                <a href="{% url 'financial_dashboard' %}" class="nav-link" style="color: #e0e7ff !important;">Home</a>
+                <a href="{% url 'personal_info' %}" class="nav-link" style="color: #e0e7ff !important;">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link" style="color: #e0e7ff !important;">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link" style="color: #e0e7ff !important;">Results</a>
+                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link active" style="color: #ffffff !important; background-color: rgba(255, 255, 255, 0.2) !important;">Monte Carlo</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn">Logout</button>
@@ -54,9 +186,21 @@
 
     <main class="main-content">
         <div class="container">
-            <div class="page-header">
-                <h2>Monte Carlo Simulation</h2>
-                <p>Run Monte Carlo simulations to see probability distributions of your investment outcomes based on varying returns and inflation.</p>
+            <div style="margin-bottom: 2.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <h1 style="font-size: 2.5rem; font-weight: 700; color: #1e40af; margin: 0 0 0.5rem 0; letter-spacing: -0.02em;">Monte Carlo Simulation</h1>
+                        <p style="font-size: 1.125rem; color: #475569; margin: 0;">Run Monte Carlo simulations to see probability distributions of your investment outcomes based on varying returns and inflation.</p>
+                    </div>
+                    <button id="showMCExplanationBtn" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; white-space: nowrap; margin-top: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        What is Monte Carlo?
+                    </button>
+                </div>
             </div>
 
             {% if messages %}
@@ -226,6 +370,138 @@
             </div>
         </div>
     </main>
+
+    <!-- Monte Carlo Explanation Modal -->
+    <div id="mcExplanationModal" class="mc-modal-overlay">
+        <div class="mc-modal">
+            <div class="mc-modal-header">
+                <h2>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                    What is a Monte Carlo Simulation?
+                </h2>
+                <button class="mc-modal-close" id="mcModalClose" aria-label="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="mc-modal-content">
+                <p>
+                    A <strong>Monte Carlo simulation</strong> is a powerful statistical method used to model the probability of different outcomes in financial planning. It helps you understand the range of possible future scenarios for your investments by running thousands of simulations with varying market conditions.
+                </p>
+                
+                <h3>How It Works</h3>
+                <p>
+                    Instead of assuming fixed returns, Monte Carlo simulations:
+                </p>
+                <ul>
+                    <li>Run hundreds or thousands of different scenarios</li>
+                    <li>Vary investment returns and inflation rates randomly within realistic ranges</li>
+                    <li>Show you the probability of reaching your financial goals</li>
+                    <li>Help you understand the range of possible outcomes</li>
+                </ul>
+                
+                <h3>Why Use It?</h3>
+                <p>
+                    Traditional financial projections assume fixed returns, but real markets are unpredictable. Monte Carlo simulations account for this uncertainty by showing you:
+                </p>
+                <ul>
+                    <li><strong>Best-case scenarios:</strong> What happens if markets perform well</li>
+                    <li><strong>Worst-case scenarios:</strong> What happens if markets underperform</li>
+                    <li><strong>Most likely outcomes:</strong> The range of results you can reasonably expect</li>
+                    <li><strong>Success probability:</strong> The likelihood of reaching your target goal</li>
+                </ul>
+                
+                <h3>What You'll See</h3>
+                <p>
+                    After running a simulation, you'll get:
+                </p>
+                <ul>
+                    <li>Probability distributions showing the range of possible portfolio values</li>
+                    <li>Percentiles (10th, 25th, 50th, 75th, 90th) to understand different outcome scenarios</li>
+                    <li>If you set a target goal, the probability of reaching that goal</li>
+                    <li>Visual charts to help you understand the results</li>
+                </ul>
+                
+                <p style="margin-top: 1.5rem; padding: 1rem; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0.5rem;">
+                    <strong>💡 Tip:</strong> Run multiple simulations with different parameters to explore various scenarios and make more informed financial decisions.
+                </p>
+            </div>
+            <div class="mc-modal-footer">
+                <button class="btn-primary" id="mcModalGotIt" style="padding: 0.75rem 2rem;">
+                    Got it, let's get started!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show Monte Carlo explanation modal on first visit
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('mcExplanationModal');
+            const closeBtn = document.getElementById('mcModalClose');
+            const gotItBtn = document.getElementById('mcModalGotIt');
+            const showBtn = document.getElementById('showMCExplanationBtn');
+            
+            // Function to open modal
+            function openModal() {
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
+            }
+            
+            // Function to close modal
+            function closeModal() {
+                modal.classList.remove('show');
+                document.body.style.overflow = ''; // Restore scrolling
+                localStorage.setItem('mc_explanation_seen', 'true');
+            }
+            
+            // Check if user has seen the explanation before
+            const hasSeenExplanation = localStorage.getItem('mc_explanation_seen');
+            
+            if (!hasSeenExplanation) {
+                // Show modal after a short delay for better UX
+                setTimeout(() => {
+                    openModal();
+                }, 300);
+            }
+            
+            // Button to show explanation
+            if (showBtn) {
+                showBtn.addEventListener('click', function() {
+                    openModal();
+                });
+            }
+            
+            // Close button handlers
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeModal);
+            }
+            
+            if (gotItBtn) {
+                gotItBtn.addEventListener('click', closeModal);
+            }
+            
+            // Close on overlay click (outside modal)
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // Close on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
 

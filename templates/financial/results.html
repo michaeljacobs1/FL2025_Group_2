@@ -5,19 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projected Income/Results - {{ user.username }}</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link rel="stylesheet" href="{% static 'styles.css' %}?v=2.2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <nav class="navbar">
+<body style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%) !important; background-attachment: fixed !important;">
+    <nav class="navbar" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;">
         <div class="nav-container">
-            <h1 class="nav-brand">Financial Planner</h1>
+            <h1 class="nav-brand" style="color: #ffffff !important;">Financial Planner</h1>
             <div class="nav-links">
-                <a href="{% url 'financial_dashboard' %}" class="nav-link">Home</a>
-                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
-                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
-                <a href="{% url 'results' %}" class="nav-link active">Results</a>
-                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link">Monte Carlo</a>
+                <a href="{% url 'financial_dashboard' %}" class="nav-link" style="color: #e0e7ff !important;">Home</a>
+                <a href="{% url 'personal_info' %}" class="nav-link" style="color: #e0e7ff !important;">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link" style="color: #e0e7ff !important;">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link active" style="color: #ffffff !important; background-color: rgba(255, 255, 255, 0.2) !important;">Results</a>
+                <a href="{% url 'monte_carlo_simulation' %}" class="nav-link" style="color: #e0e7ff !important;">Monte Carlo</a>
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn">Logout</button>
@@ -28,9 +28,9 @@
 
     <main class="main-content">
         <div class="container">
-            <div class="page-header">
-                <h2>Your Financial Projection</h2>
-                <p>View your projected income, costs, and savings over time with interactive charts and detailed breakdowns.</p>
+            <div style="margin-bottom: 2.5rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 700; color: #1e40af; margin: 0 0 0.5rem 0; letter-spacing: -0.02em;">Your Financial Projection</h1>
+                <p style="font-size: 1.125rem; color: #475569; margin: 0;">View your projected income, costs, and savings over time with interactive charts and detailed breakdowns.</p>
             </div>
 
             {% if messages %}
@@ -105,20 +105,29 @@
                     </div>
                     
                     <!-- Error message -->
-                    <div id="aiErrorMessage" style="display: none; padding: 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; color: #991b1b; margin-bottom: 1rem;"></div>
+                    <div id="aiErrorMessage" style="display: none; padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 2px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 12px; color: #991b1b; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 1.25rem; flex-shrink: 0;"></i>
+                            <span style="font-weight: 500;"></span>
+                        </div>
+                    </div>
                     
                     <!-- AI Analysis Result -->
-                    <div id="aiAnalysisResult" style="display: none; padding: 1.5rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <h5 style="margin: 0; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="fas fa-brain" style="color: #3b82f6;"></i>
-                                AI Analysis
+                    <div id="aiAnalysisResult" style="display: none; margin-top: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 2px solid #e0e7ff; border-left: 4px solid #3b82f6; border-radius: 12px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); overflow: hidden;">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                            <h5 style="margin: 0; color: #ffffff; display: flex; align-items: center; gap: 0.75rem; font-size: 1.125rem; font-weight: 600;">
+                                <div style="width: 36px; height: 36px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-brain" style="color: #ffffff; font-size: 1.125rem;"></i>
+                                </div>
+                                <span>AI Financial Analysis</span>
                             </h5>
-                            <button type="button" id="closeAIAnalysisBtn" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1.25rem; padding: 0.25rem 0.5rem;" title="Close">
+                            <button type="button" id="closeAIAnalysisBtn" style="background: rgba(255, 255, 255, 0.2); border: none; color: #ffffff; cursor: pointer; font-size: 1.125rem; padding: 0.5rem 0.75rem; border-radius: 6px; transition: all 0.2s;" title="Close" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div id="aiAnalysisContent" style="color: #374151; line-height: 1.6; white-space: pre-wrap;"></div>
+                        <!-- Content -->
+                        <div id="aiAnalysisContent" style="padding: 2rem; color: #1e293b; line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap; background: #ffffff;"></div>
                     </div>
                 </div>
                             </div>
@@ -326,7 +335,7 @@
             const costs = incomeData.map(entry => entry.costs);
             const savings = incomes.map((income, i) => income - costs[i]);
 
-            // Group data by location for separate datasets
+            // Group data by location for legend (not for separate datasets)
             const locationGroups = {};
             incomeData.forEach(entry => {
                 if (!locationGroups[entry.location]) {
@@ -340,59 +349,113 @@
                 return Math.min(...locationGroups[a].map(e => e.year)) - Math.min(...locationGroups[b].map(e => e.year));
             });
 
-            // Create datasets - one for each location
+            // Find location change points
+            const locationChangePoints = [];
+            for (let i = 1; i < incomeData.length; i++) {
+                if (incomeData[i].location !== incomeData[i-1].location) {
+                    locationChangePoints.push({
+                        year: incomeData[i].year,
+                        index: i,
+                        fromLocation: incomeData[i-1].location,
+                        toLocation: incomeData[i].location
+                    });
+                }
+            }
+
+            // Create single aggregated datasets for Income and Costs
             const datasets = [];
             const incomeColor = '#3b82f6'; 
             const costsColor = '#ef4444';  
 
-            sortedLocations.forEach((location, index) => {
-                const group = locationGroups[location];
-                const years = group.map(entry => entry.year);
-                const incomes = group.map(entry => entry.income);
-                const costs = group.map(entry => entry.costs);
-                
-                // Create data arrays with nulls for gaps
-                const incomeDataArray = new Array(incomeData.length).fill(null);
-                const costsDataArray = new Array(incomeData.length).fill(null);
-                
-                group.forEach(entry => {
-                    const dataIndex = incomeData.findIndex(e => e.year === entry.year);
-                    if (dataIndex !== -1) {
-                        incomeDataArray[dataIndex] = entry.income;
-                        costsDataArray[dataIndex] = entry.costs;
-                    }
-                });
+            // Aggregate all income and costs data into single arrays
+            const incomeDataArray = incomeData.map(entry => entry.income);
+            const costsDataArray = incomeData.map(entry => entry.costs);
 
-                // Handle location label - if "N/A", don't include location in label
-                const isPercentageBased = location === "N/A" || location === "Unknown";
-                const incomeLabel = isPercentageBased ? "Income" : `Income - ${location}`;
-                const costsLabel = isPercentageBased ? "Costs" : `Costs - ${location}`;
+            // Get max value for vertical lines
+            const maxValue = Math.max(...incomeDataArray.filter(v => v !== null), ...costsDataArray.filter(v => v !== null));
 
-                datasets.push({
-                    label: incomeLabel,
-                    data: incomeDataArray,
-                    borderColor: incomeColor,
-                    backgroundColor: incomeColor + '20',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                });
-                
-                datasets.push({
-                    label: costsLabel,
-                    data: costsDataArray,
-                    borderColor: costsColor,
-                    backgroundColor: costsColor + '20',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                });
+            // Create single Income dataset
+            datasets.push({
+                label: "Income",
+                data: incomeDataArray,
+                borderColor: incomeColor,
+                backgroundColor: incomeColor + '20',
+                borderWidth: 3,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6
             });
+            
+            // Create single Costs dataset
+            datasets.push({
+                label: "Costs",
+                data: costsDataArray,
+                borderColor: costsColor,
+                backgroundColor: costsColor + '20',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            });
+
+            // Store location change points for use in chart options
+            window.locationChangePoints = locationChangePoints;
+
+            // Create a plugin to draw vertical lines for location changes
+            const locationChangePlugin = {
+                id: 'locationChangeLines',
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const xScale = chart.scales.x;
+                    const yScale = chart.scales.y;
+                    
+                    if (window.locationChangePoints && window.locationChangePoints.length > 0) {
+                        window.locationChangePoints.forEach((changePoint) => {
+                            const xPos = xScale.getPixelForValue(changePoint.index);
+                            const yTop = yScale.top;
+                            const yBottom = yScale.bottom;
+                            
+                            // Draw vertical dashed line
+                            ctx.save();
+                            ctx.strokeStyle = '#94a3b8';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([8, 4]);
+                            ctx.beginPath();
+                            ctx.moveTo(xPos, yTop);
+                            ctx.lineTo(xPos, yBottom);
+                            ctx.stroke();
+                            ctx.restore();
+                            
+                            // Add label at top
+                            const isPercentageBased = changePoint.toLocation === "N/A" || changePoint.toLocation === "Unknown";
+                            const label = isPercentageBased ? 'Percentage-Based' : changePoint.toLocation;
+                            
+                            ctx.save();
+                            ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+                            ctx.font = 'bold 11px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            
+                            // Draw label background
+                            const textMetrics = ctx.measureText(`→ ${label}`);
+                            const textWidth = textMetrics.width;
+                            const textHeight = 16;
+                            const padding = 6;
+                            
+                            ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+                            ctx.fillRect(xPos - textWidth/2 - padding, yTop - textHeight - padding, textWidth + padding*2, textHeight + padding*2);
+                            
+                            // Draw label text
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(`→ ${label}`, xPos, yTop - padding);
+                            ctx.restore();
+                        });
+                    }
+                }
+            };
 
             if (document.getElementById('incomeCostsChart')) {
                 const ctx = document.getElementById('incomeCostsChart').getContext('2d');
@@ -403,6 +466,7 @@
                         labels: years,
                         datasets: datasets
                     },
+                    plugins: [locationChangePlugin],
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
@@ -412,14 +476,16 @@
                                 position: 'top',
                                 labels: {
                                     boxWidth: 12,
-                                    padding: 10
+                                    padding: 10,
+                                    filter: function(item, chart) {
+                                        // Hide location change lines from legend
+                                        return !item.text.includes('Location:');
+                                    }
                                 }
                             },
                             title: {
                                 display: true,
-                                text: sortedLocations.some(loc => loc === "N/A" || loc === "Unknown") 
-                                    ? 'After-Tax Income vs Costs Over Time' 
-                                    : 'After-Tax Income vs Costs Over Time by Location',
+                                text: 'After-Tax Income vs Costs Over Time',
                                 font: { size: 16 }
                             },
                             tooltip: {
@@ -430,19 +496,18 @@
                                         const location = entry.location;
                                         const isPercentageBased = location === "N/A" || location === "Unknown";
                                         
-                                        if (context.dataset.label.includes('Costs')) {
+                                        if (context.dataset.label === 'Costs') {
                                             if (isPercentageBased) {
-                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' (Percentage-based calculation)';
+                                                return 'Costs: $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' (Percentage-based calculation)';
                                             } else {
-                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
+                                                return 'Costs: $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
                                             }
                                         } else {
                                             // Income is after-tax
-                                            const gross = entry.gross_income || value;
                                             if (isPercentageBased) {
-                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' (After Tax)';
+                                                return 'Income: $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' (After Tax)';
                                             } else {
-                                                return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (After Tax, ${location})`;
+                                                return 'Income: $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (After Tax, ${location})`;
                                             }
                                         }
                                     }
@@ -452,7 +517,40 @@
                         scales: {
                             x: {
                                 title: { display: true, text: 'Year' },
-                                grid: { display: false }
+                                grid: { 
+                                    display: true,
+                                    color: function(context) {
+                                        // Draw vertical lines at location change points
+                                        if (window.locationChangePoints && window.locationChangePoints.some(cp => cp.index === context.index)) {
+                                            return 'rgba(148, 163, 184, 0.7)';
+                                        }
+                                        return 'rgba(0, 0, 0, 0.05)';
+                                    },
+                                    lineWidth: function(context) {
+                                        if (window.locationChangePoints && window.locationChangePoints.some(cp => cp.index === context.index)) {
+                                            return 2;
+                                        }
+                                        return 1;
+                                    },
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    callback: function(value, index, ticks) {
+                                        // Add location label below year if it's a location change point
+                                        const changePoint = window.locationChangePoints && window.locationChangePoints.find(cp => cp.index === index);
+                                        if (changePoint) {
+                                            const isPercentageBased = changePoint.toLocation === "N/A" || changePoint.toLocation === "Unknown";
+                                            const label = isPercentageBased ? 'Percentage-Based' : changePoint.toLocation;
+                                            return value + '\n→ ' + label;
+                                        }
+                                        return value;
+                                    },
+                                    maxRotation: 0,
+                                    minRotation: 0,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
                             },
                             y: {
                                 beginAtZero: true,
@@ -545,13 +643,54 @@
                 const annualReturns = generateVaryingReturns(savings.length, targetCAGR);
                 
                 for (let i = 0; i < savings.length; i++) {
+                    const annualSavings = savings[i]; // Can be positive (surplus) or negative (deficit)
                     
                     if (i === 0) {
-                        currentNetWorth = savings[i];
+                        // First year: net worth is just the savings (or deficit)
+                        currentNetWorth = annualSavings;
                     } else {
+                        // For subsequent years, handle debt and investment properly
                         
-                        currentNetWorth = (currentNetWorth * (1 + annualReturns[i])) + savings[i];
+                        if (currentNetWorth < 0) {
+                            // We have debt (negative net worth)
+                            // Don't apply investment returns to debt - debt doesn't grow with investment returns
+                            
+                            if (annualSavings > 0) {
+                                // Positive savings: use it to pay off debt first
+                                currentNetWorth = currentNetWorth + annualSavings;
+                                // If we still have debt after using savings, it remains negative
+                                // If savings paid off all debt, we now have positive net worth
+                            } else {
+                                // Negative savings (more deficit): add to debt
+                                currentNetWorth = currentNetWorth + annualSavings;
+                            }
+                            // No investment returns applied when in debt
+                            
+                        } else if (currentNetWorth > 0) {
+                            // We have positive net worth (invested money)
+                            
+                            // First, apply investment returns to existing positive net worth
+                            currentNetWorth = currentNetWorth * (1 + annualReturns[i]);
+                            
+                            // Then add this year's savings
+                            if (annualSavings > 0) {
+                                // Positive savings: add to investments
+                                currentNetWorth = currentNetWorth + annualSavings;
+                            } else {
+                                // Negative savings (deficit): use invested money to cover it
+                                currentNetWorth = currentNetWorth + annualSavings;
+                                
+                                // If this makes net worth negative, we're now in debt
+                                // (no investment returns will be applied next year if it's negative)
+                            }
+                            
+                        } else {
+                            // currentNetWorth === 0 (exactly zero)
+                            // Just add savings (no returns on zero)
+                            currentNetWorth = annualSavings;
+                        }
                     }
+                    
                     netWorthSeries.push(currentNetWorth);
                 }
                 
@@ -719,8 +858,11 @@
                         getAIOpinionBtn.disabled = false;
                         getAIOpinionBtn.innerHTML = '<i class="fas fa-robot"></i> Get AI Analysis';
                         if (aiErrorMessage) {
-                            aiErrorMessage.textContent = 'CSRF token not found. Please refresh the page and try again.';
-                            aiErrorMessage.style.display = 'block';
+                            const errorSpan = aiErrorMessage.querySelector('span');
+                            if (errorSpan) {
+                                errorSpan.textContent = 'CSRF token not found. Please refresh the page and try again.';
+                            }
+                            aiErrorMessage.style.display = 'flex';
                         }
                         return;
                     }
@@ -786,11 +928,39 @@
                             // Display analysis (strip markdown)
                             if (aiAnalysisContent && aiAnalysisResult) {
                                 const cleanedAnalysis = stripMarkdown(data.analysis);
-                                aiAnalysisContent.textContent = cleanedAnalysis;
+                                // Format the analysis with better paragraph breaks
+                                let formattedAnalysis = cleanedAnalysis
+                                    .split('\n\n')
+                                    .map(para => para.trim())
+                                    .filter(para => para.length > 0)
+                                    .join('\n\n');
+                                
+                                // Make numbered headers bold (1., 2., 3., 4., 5., 6.)
+                                formattedAnalysis = formattedAnalysis.replace(/^(\d+\.\s+[^:\n]+:)/gm, '<strong>$1</strong>');
+                                
+                                // Escape HTML to prevent XSS, then restore the bold tags
+                                const escapeHtml = (text) => {
+                                    const div = document.createElement('div');
+                                    div.textContent = text;
+                                    return div.innerHTML;
+                                };
+                                
+                                // Split by bold tags, escape non-bold parts
+                                const parts = formattedAnalysis.split(/(<strong>.*?<\/strong>)/g);
+                                const escapedParts = parts.map(part => {
+                                    if (part.startsWith('<strong>') && part.endsWith('</strong>')) {
+                                        return part; // Keep bold tags as-is
+                                    }
+                                    return escapeHtml(part); // Escape HTML in other parts
+                                });
+                                
+                                aiAnalysisContent.innerHTML = escapedParts.join('');
                                 aiAnalysisResult.style.display = 'block';
                                 
-                                // Scroll to analysis
-                                aiAnalysisResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                // Scroll to analysis with smooth animation
+                                setTimeout(() => {
+                                    aiAnalysisResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 100);
                             } else {
                                 console.error('AI analysis elements not found in DOM');
                             }
@@ -799,8 +969,11 @@
                             const errorMsg = data.error || 'Failed to generate AI analysis. Please try again.';
                             console.error('AI Analysis Error:', errorMsg);
                             if (aiErrorMessage) {
-                                aiErrorMessage.textContent = errorMsg;
-                                aiErrorMessage.style.display = 'block';
+                                const errorSpan = aiErrorMessage.querySelector('span');
+                                if (errorSpan) {
+                                    errorSpan.textContent = errorMsg;
+                                }
+                                aiErrorMessage.style.display = 'flex';
                             }
                         }
                     })
