@@ -44,7 +44,7 @@ metadata:
   name: project-draft-db
 spec:
   selector:
-    app: project-draft-db
+    app: db
   ports:
   - port: 3306
 
