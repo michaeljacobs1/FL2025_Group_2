@@ -27,7 +27,7 @@ services:
         ports:
             - "8000:8000"
         environment:
-            - OPENAI_API_KEY=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
+            - OPENAI_API_KEY=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
             - OPENAI_MODEL=gpt-3.5-turbo
         depends_on:
             db:

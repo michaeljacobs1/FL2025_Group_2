@@ -8,6 +8,7 @@ from .views import (
     FinancialProfileViewSet,
     IncomeEntryViewSet,
     IncomeTimelineView,
+    MonteCarloSimulationDeleteView,
     MonteCarloSimulationDetailView,
     MonteCarloSimulationView,
     MonteCarloSimulationViewSet,
@@ -60,5 +61,10 @@ urlpatterns = [
         "monte-carlo/<int:simulation_id>/",
         MonteCarloSimulationDetailView.as_view(),
         name="monte_carlo_simulation_detail",
+    ),
+    path(
+        "monte-carlo/<int:simulation_id>/delete/",
+        MonteCarloSimulationDeleteView.as_view(),
+        name="monte_carlo_simulation_delete",
     ),
 ]

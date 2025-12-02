@@ -1639,6 +1639,11 @@ class MonteCarloSimulationView(LoginRequiredMixin, View):
         target_goal = request.POST.get("target_goal", "")
         store_iterations = request.POST.get("store_iterations") == "on"
 
+        # Bootstrap options (default to True for historical data)
+        use_bootstrap = request.POST.get("use_bootstrap", "on") == "on"
+        use_recent_data = request.POST.get("use_recent_data", "on") == "on"
+        recent_data_years = request.POST.get("recent_data_years", "50")
+
         # Custom parameters (optional, override scenario)
         base_return_rate = request.POST.get("base_return_rate", "")
         return_rate_std_dev = request.POST.get("return_rate_std_dev", "")
@@ -1683,6 +1688,12 @@ class MonteCarloSimulationView(LoginRequiredMixin, View):
         )
 
         try:
+            # Parse recent_data_years
+            try:
+                recent_data_years_int = int(recent_data_years)
+            except (ValueError, TypeError):
+                recent_data_years_int = 50  # Default
+
             service = MonteCarloService(user)
             simulation = service.run_simulation(
                 scenario_id=scenario_id_int,
@@ -1694,6 +1705,9 @@ class MonteCarloSimulationView(LoginRequiredMixin, View):
                 inflation_rate_std_dev=inflation_rate_std_dev_decimal,
                 target_goal=target_goal_decimal,
                 store_iterations=store_iterations,
+                use_bootstrap=use_bootstrap,
+                use_recent_data=use_recent_data,
+                recent_data_years=recent_data_years_int,
             )
             messages.success(
                 request,
@@ -1732,14 +1746,142 @@ class MonteCarloSimulationDetailView(LoginRequiredMixin, View):
             else []
         )
 
+        # Infer distribution type and calculate skewness indicators
+        # Right-skewed (bootstrap): mean > median (typical for stock returns)
+        # Normal: mean ≈ median
+        mean_val = float(simulation.mean_final_value)
+        median_val = float(simulation.median_final_value)
+        skewness_ratio = mean_val / median_val if median_val > 0 else 1.0
+
+        # Determine if bootstrap was used:
+        # 1. If mean > median by any amount, likely bootstrap (right-skewed)
+        # 2. Check percentile asymmetry (bootstrap has longer right tail)
+        # 3. Default to bootstrap since it's now the default method
+        percentile_range_left = float(simulation.median_final_value) - float(
+            simulation.percentile_5
+        )
+        percentile_range_right = float(simulation.percentile_95) - float(
+            simulation.median_final_value
+        )
+        tail_asymmetry = (
+            percentile_range_right / percentile_range_left
+            if percentile_range_left > 0
+            else 1.0
+        )
+
+        # Bootstrap detection: either mean > median OR right tail is longer (asymmetric)
+        # Default to bootstrap if created recently (after bootstrap became default)
+        from datetime import datetime, timedelta
+
+        recent_threshold = datetime.now() - timedelta(
+            days=30
+        )  # Default to bootstrap for recent simulations
+
+        is_likely_bootstrap = (
+            skewness_ratio > 1.01  # Any right-skew
+            or tail_asymmetry > 1.1  # Asymmetric tails
+            or simulation.created_at.replace(tzinfo=None)
+            > recent_threshold  # Recent simulations default to bootstrap
+        )
+
+        # Calculate additional skewness metrics
+        percentile_range_median_5 = float(simulation.median_final_value) - float(
+            simulation.percentile_5
+        )
+        percentile_range_95_median = float(simulation.percentile_95) - float(
+            simulation.median_final_value
+        )
+
+        # Right-skewed distributions have longer tail on the right
+        right_tail_ratio = (
+            percentile_range_95_median / percentile_range_median_5
+            if percentile_range_median_5 > 0
+            else 1.0
+        )
+
+        # Calculate risk assessment level
+        percentile_5_val = float(simulation.percentile_5)
+        median_val = float(simulation.median_final_value)
+        worst_case_ratio = percentile_5_val / median_val if median_val > 0 else 1.0
+
+        # Determine risk level based on how far worst case is from median
+        if worst_case_ratio < 0.7:
+            risk_level = "High"
+            risk_description = "Worst-case could be significantly below the median, indicating substantial downside risk."
+        elif worst_case_ratio < 0.85:
+            risk_level = "Moderate"
+            risk_description = "Some downside potential, but worst-case remains reasonably close to expected outcomes."
+        else:
+            risk_level = "Low"
+            risk_description = "Even worst-case outcomes remain close to the median, indicating relatively stable returns."
+
+        # Prepare iteration data for histogram - use ALL stored iterations
+        # This gives us the actual bootstrap results for accurate visualization
+        iteration_values_json = "[]"
+        if iterations:
+            # Sort by iteration number to ensure correct order
+            sorted_iterations = sorted(iterations, key=lambda x: x.iteration_number)
+            iteration_values = [float(iter.final_value) for iter in sorted_iterations]
+            iteration_values_json = json.dumps(iteration_values)
+        else:
+            # If no iterations stored, we'll use percentile-based approximation
+            # But ideally iterations should be stored for bootstrap simulations
+            iteration_values_json = "[]"
+
         return render(
             request,
             self.template_name,
             {
                 "simulation": simulation,
                 "iterations": iterations,
+                "is_likely_bootstrap": is_likely_bootstrap,
+                "skewness_ratio": skewness_ratio,
+                "right_tail_ratio": right_tail_ratio,
+                "iteration_values_json": iteration_values_json,
+                "risk_level": risk_level,
+                "risk_description": risk_description,
             },
         )
+
+
+class MonteCarloSimulationDeleteView(LoginRequiredMixin, View):
+    """View for deleting a Monte Carlo simulation"""
+
+    def post(self, request, simulation_id):
+        user = request.user
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+        try:
+            simulation = MonteCarloSimulation.objects.get(id=simulation_id, user=user)
+            simulation.delete()
+
+            if is_ajax:
+                return JsonResponse(
+                    {"success": True, "message": "Simulation deleted successfully."}
+                )
+            else:
+                messages.success(request, "Simulation deleted successfully.")
+                return redirect("monte_carlo_simulation")
+        except MonteCarloSimulation.DoesNotExist:
+            if is_ajax:
+                return JsonResponse(
+                    {"success": False, "message": "Simulation not found."}, status=404
+                )
+            else:
+                messages.error(request, "Simulation not found.")
+                return redirect("monte_carlo_simulation")
+        except Exception as e:
+            if is_ajax:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": f"Error deleting simulation: {str(e)}",
+                    },
+                    status=500,
+                )
+            else:
+                messages.error(request, f"Error deleting simulation: {str(e)}")
+                return redirect("monte_carlo_simulation")
 
 
 class AICostEstimateViewSet(viewsets.ModelViewSet):

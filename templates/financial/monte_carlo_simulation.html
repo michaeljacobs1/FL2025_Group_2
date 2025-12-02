@@ -164,6 +164,21 @@
                 opacity: 1;
             }
         }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
     </style>
 </head>
 <body style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%) !important; background-attachment: fixed !important;">
@@ -289,10 +304,67 @@
                             </div>
                         </div>
 
+                        <div style="margin: 2rem 0 1rem 0; border-top: 2px solid #e2e8f0; padding-top: 1.5rem;">
+                            <h4 style="color: #1e293b; font-weight: 700; margin: 0 0 0.5rem 0;">Historical Data Options</h4>
+                            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.5;">
+                                Simulations use historical stock market and inflation data for realistic projections. 
+                                Choose whether to use all available data or focus on recent years.
+                            </p>
+                            
+                            <!-- Hidden field to always use bootstrap -->
+                            <input type="hidden" name="use_bootstrap" value="on">
+                            
+                            <!-- Data Time Period Selection -->
+                            <div class="form-group" style="padding: 1rem; background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 6px; border-left: 4px solid #0ea5e9;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                                    <input type="checkbox" name="use_recent_data" value="on" checked id="use_recent_data_checkbox" style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
+                                    <span style="color: #1e293b; font-weight: 600; font-size: 1rem;">Use Recent Data Only</span>
+                                </label>
+                                
+                                <div id="recent_years_input" style="margin-left: 1.75rem;">
+                                    <label for="recent_data_years" style="color: #475569; font-weight: 600; display: block; margin-bottom: 0.5rem;">
+                                        Number of Recent Years:
+                                    </label>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="number" id="recent_data_years" name="recent_data_years" 
+                                               value="50" min="10" max="100" step="5" 
+                                               class="form-control" style="border-color: #cbd5e1; width: 120px;">
+                                        <span style="color: #64748b; font-size: 0.9rem;">years</span>
+                                    </div>
+                                    <small class="form-text" style="color: #64748b; display: block; margin-top: 0.5rem; line-height: 1.5;">
+                                        Default: 50 years. Uncheck "Use Recent Data Only" above to use all historical data (back to 1928).
+                                    </small>
+                                </div>
+                                
+                                <div id="all_data_note" style="margin-left: 1.75rem; display: none; padding: 0.75rem; background: #eff6ff; border-radius: 4px; margin-top: 0.5rem;">
+                                    <small style="color: #1e40af; line-height: 1.5;">
+                                        ✓ Using all available historical data (1928-present) for bootstrap sampling.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-actions" style="margin-top: 1.5rem;">
-                            <button type="submit" class="btn-primary" style="background-color: #3b82f6; color: white; border: none; padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2); transition: all 0.2s ease;">
+                            <button type="submit" id="runSimulationBtn" class="btn-primary" style="background-color: #3b82f6; color: white; border: none; padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2); transition: all 0.2s ease;">
                                 Run Monte Carlo Simulation
                             </button>
+                        </div>
+                        
+                        <!-- Progress Bar Container -->
+                        <div id="simulationProgressContainer" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 8px; border-left: 4px solid #3b82f6;">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                <div class="spinner" style="width: 24px; height: 24px; border: 3px solid #bfdbfe; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <div>
+                                    <h4 style="margin: 0; color: #1e40af; font-weight: 600; font-size: 1.1rem;">Running Monte Carlo Simulation...</h4>
+                                    <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.9rem;">This may take a few moments. Please do not close this page.</p>
+                                </div>
+                            </div>
+                            <div style="background: #e5e7eb; border-radius: 10px; height: 12px; overflow: hidden; position: relative;">
+                                <div id="simulationProgressBar" style="background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%); height: 100%; width: 0%; border-radius: 10px; transition: width 0.3s ease; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 2s infinite;"></div>
+                                </div>
+                            </div>
+                            <p id="simulationProgressText" style="margin: 0.75rem 0 0 0; color: #475569; font-size: 0.85rem; text-align: center;">Initializing simulation...</p>
                         </div>
                     </form>
                 </div>
@@ -351,7 +423,18 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <a href="{% url 'monte_carlo_simulation_detail' simulation.id %}" class="btn-secondary btn-sm" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; transition: all 0.2s;">View Details</a>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <a href="{% url 'monte_carlo_simulation_detail' simulation.id %}" class="btn-secondary btn-sm" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; transition: all 0.2s;">View Details</a>
+                                            <button 
+                                                class="delete-simulation-btn" 
+                                                data-simulation-id="{{ simulation.id }}"
+                                                data-delete-url="{% url 'monte_carlo_simulation_delete' simulation.id %}"
+                                                style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; transition: all 0.2s; padding: 0;"
+                                                title="Delete simulation"
+                                                aria-label="Delete simulation">
+                                                ×
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -448,6 +531,101 @@
             const gotItBtn = document.getElementById('mcModalGotIt');
             const showBtn = document.getElementById('showMCExplanationBtn');
             
+            // Monte Carlo form submission with progress bar
+            const monteCarloForm = document.querySelector('.monte-carlo-form');
+            const progressContainer = document.getElementById('simulationProgressContainer');
+            const progressBar = document.getElementById('simulationProgressBar');
+            const progressText = document.getElementById('simulationProgressText');
+            const runBtn = document.getElementById('runSimulationBtn');
+            
+            if (monteCarloForm) {
+                monteCarloForm.addEventListener('submit', function(e) {
+                    // Show progress bar
+                    if (progressContainer) {
+                        progressContainer.style.display = 'block';
+                        progressContainer.style.animation = 'slideUp 0.3s ease';
+                        
+                        // Smooth scroll to progress bar
+                        setTimeout(() => {
+                            progressContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }, 100);
+                    }
+                    
+                    // Disable submit button
+                    if (runBtn) {
+                        runBtn.disabled = true;
+                        runBtn.style.opacity = '0.6';
+                        runBtn.style.cursor = 'not-allowed';
+                        runBtn.textContent = 'Running...';
+                    }
+                    
+                    // Animate progress bar
+                    let progress = 0;
+                    const progressMessages = [
+                        { percent: 10, text: 'Initializing simulation parameters...' },
+                        { percent: 25, text: 'Loading historical data...' },
+                        { percent: 40, text: 'Running bootstrap sampling...' },
+                        { percent: 60, text: 'Calculating iterations...' },
+                        { percent: 75, text: 'Computing statistics...' },
+                        { percent: 90, text: 'Finalizing results...' },
+                        { percent: 95, text: 'Almost done...' }
+                    ];
+                    
+                    let messageIndex = 0;
+                    const progressInterval = setInterval(function() {
+                        if (progress < 95) {
+                            // Increment progress
+                            progress += Math.random() * 3 + 1; // Random increment between 1-4%
+                            if (progress > 95) progress = 95;
+                            
+                            // Update progress bar
+                            if (progressBar) {
+                                progressBar.style.width = progress + '%';
+                            }
+                            
+                            // Update message
+                            if (messageIndex < progressMessages.length) {
+                                const nextMessage = progressMessages[messageIndex];
+                                if (progress >= nextMessage.percent) {
+                                    if (progressText) {
+                                        progressText.textContent = nextMessage.text;
+                                    }
+                                    messageIndex++;
+                                }
+                            }
+                        }
+                    }, 300); // Update every 300ms
+                    
+                    // Store interval ID to clear if needed (though form will submit)
+                    monteCarloForm.dataset.progressInterval = progressInterval;
+                });
+            }
+            
+            // Toggle recent years input based on checkbox
+            const recentDataCheckbox = document.getElementById('use_recent_data_checkbox');
+            const recentYearsInput = document.getElementById('recent_years_input');
+            const allDataNote = document.getElementById('all_data_note');
+            
+            function toggleRecentYearsInput() {
+                if (recentDataCheckbox && recentYearsInput && allDataNote) {
+                    if (recentDataCheckbox.checked) {
+                        recentYearsInput.style.display = 'block';
+                        allDataNote.style.display = 'none';
+                    } else {
+                        recentYearsInput.style.display = 'none';
+                        allDataNote.style.display = 'block';
+                    }
+                }
+            }
+            
+            // Initialize visibility
+            toggleRecentYearsInput();
+            
+            // Toggle on change
+            if (recentDataCheckbox) {
+                recentDataCheckbox.addEventListener('change', toggleRecentYearsInput);
+            }
+            
             // Function to open modal
             function openModal() {
                 modal.classList.add('show');
@@ -500,6 +678,112 @@
                     closeModal();
                 }
             });
+            
+            // Handle delete simulation buttons
+            const deleteButtons = document.querySelectorAll('.delete-simulation-btn');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const simulationId = this.getAttribute('data-simulation-id');
+                    const deleteUrl = this.getAttribute('data-delete-url');
+                    const row = this.closest('tr');
+                    const button = this;
+                    
+                    // Confirm deletion
+                    if (confirm('Are you sure you want to delete this simulation? This action cannot be undone.')) {
+                        // Disable button to prevent double-clicks
+                        button.disabled = true;
+                        button.style.opacity = '0.6';
+                        button.style.cursor = 'not-allowed';
+                        
+                        // Get CSRF token
+                        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                        const csrftoken = csrfToken ? csrfToken.value : getCookie('csrftoken');
+                        
+                        // Use fetch to delete via AJAX
+                        fetch(deleteUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrftoken,
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            credentials: 'same-origin'
+                        })
+                        .then(response => {
+                            // Check if response is JSON
+                            const contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('application/json')) {
+                                return response.json().then(data => {
+                                    if (data.success) {
+                                        // Success - remove the row with a fade-out animation
+                                        row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                        row.style.opacity = '0';
+                                        row.style.transform = 'translateX(-20px)';
+                                        
+                                        setTimeout(() => {
+                                            row.remove();
+                                            
+                                            // Check if table is now empty
+                                            const tbody = document.querySelector('.comparison-table tbody');
+                                            if (tbody && tbody.children.length === 0) {
+                                                // Reload page to show "no simulations" message
+                                                window.location.reload();
+                                            }
+                                        }, 300);
+                                    } else {
+                                        // Error from server
+                                        button.disabled = false;
+                                        button.style.opacity = '1';
+                                        button.style.cursor = 'pointer';
+                                        alert(data.message || 'Error deleting simulation. Please try again.');
+                                    }
+                                });
+                            } else {
+                                // Non-JSON response (redirect) - reload page
+                                window.location.reload();
+                            }
+                        })
+                        .catch(error => {
+                            // Network error - re-enable button and show error
+                            button.disabled = false;
+                            button.style.opacity = '1';
+                            button.style.cursor = 'pointer';
+                            console.error('Error:', error);
+                            alert('Error deleting simulation. Please try again.');
+                        });
+                    }
+                });
+                
+                // Add hover effect
+                button.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.3)';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = 'none';
+                });
+            });
+            
+            // Helper function to get CSRF token from cookie
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
         });
     </script>
 </body>
