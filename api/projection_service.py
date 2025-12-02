@@ -10,6 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Optional
 
+from .historical_data import HistoricalData
 from .models import (
     FinancialProfile,
     IncomeEntry,
@@ -379,9 +380,13 @@ class MonteCarloService:
         inflation_rate_std_dev: Optional[Decimal] = None,
         target_goal: Optional[Decimal] = None,
         store_iterations: bool = False,
+        use_bootstrap: bool = True,
+        use_recent_data: bool = True,
+        recent_data_years: int = 50,
     ) -> MonteCarloSimulation:
         """
-        Run Monte Carlo simulation with random variations in returns and inflation
+        Run Monte Carlo simulation with random variations in returns and inflation.
+        Uses historical data bootstrap by default for more realistic projections.
 
         Args:
             scenario_id: Optional scenario ID to use as base parameters
@@ -393,6 +398,9 @@ class MonteCarloService:
             inflation_rate_std_dev: Standard deviation of inflation (default: 1.0)
             target_goal: Optional target goal amount for success rate calculation
             store_iterations: Whether to store individual iteration results (can be large)
+            use_bootstrap: If True, use historical data bootstrap; if False, use normal distribution
+            use_recent_data: If True (and use_bootstrap=True), use only recent historical data
+            recent_data_years: Number of recent years to use for bootstrap (default: 50)
 
         Returns:
             MonteCarloSimulation instance with statistical results
@@ -445,25 +453,62 @@ class MonteCarloService:
 
         for iteration_num in range(1, number_of_iterations + 1):
             # Generate random return and inflation rates for each year
-            yearly_returns = []
-            yearly_inflation = []
-
-            for year in range(projected_years):
-                # Generate normally distributed return rate
-                return_rate = self._generate_normal_random(
-                    float(base_return_rate), float(return_rate_std_dev)
+            if use_bootstrap:
+                # Use empirical bootstrap from historical data
+                # Sample returns from historical stock market data
+                historical_returns = HistoricalData.bootstrap_sample_return(
+                    n=projected_years,
+                    use_recent=use_recent_data,
+                    recent_years=recent_data_years,
                 )
-                # Clamp to reasonable bounds (-50% to +50%)
-                return_rate = max(-50.0, min(50.0, return_rate))
-                yearly_returns.append(Decimal(str(return_rate)))
 
-                # Generate normally distributed inflation rate
-                inflation_rate = self._generate_normal_random(
-                    float(base_inflation_rate), float(inflation_rate_std_dev)
+                # Adjust historical returns to match target mean if specified
+                if base_return_rate is not None:
+                    target_mean = float(base_return_rate)
+                    historical_returns = HistoricalData.adjust_returns_for_risk(
+                        historical_returns, target_mean
+                    )
+
+                yearly_returns = [Decimal(str(r)) for r in historical_returns]
+
+                # Sample inflation from historical data
+                historical_inflation = HistoricalData.bootstrap_sample_inflation(
+                    n=projected_years,
+                    use_recent=use_recent_data,
+                    recent_years=recent_data_years,
                 )
-                # Clamp to reasonable bounds (0% to 15%)
-                inflation_rate = max(0.0, min(15.0, inflation_rate))
-                yearly_inflation.append(Decimal(str(inflation_rate)))
+
+                # Adjust historical inflation to match target mean if specified
+                if base_inflation_rate is not None:
+                    target_inf_mean = float(base_inflation_rate)
+                    historical_mean = HistoricalData.get_mean_inflation(
+                        use_recent=use_recent_data, recent_years=recent_data_years
+                    )
+                    shift = target_inf_mean - historical_mean
+                    historical_inflation = [inf + shift for inf in historical_inflation]
+
+                yearly_inflation = [Decimal(str(i)) for i in historical_inflation]
+            else:
+                # Use normal distribution (original method)
+                yearly_returns = []
+                yearly_inflation = []
+
+                for year in range(projected_years):
+                    # Generate normally distributed return rate
+                    return_rate = self._generate_normal_random(
+                        float(base_return_rate), float(return_rate_std_dev)
+                    )
+                    # Clamp to reasonable bounds (-50% to +50%)
+                    return_rate = max(-50.0, min(50.0, return_rate))
+                    yearly_returns.append(Decimal(str(return_rate)))
+
+                    # Generate normally distributed inflation rate
+                    inflation_rate = self._generate_normal_random(
+                        float(base_inflation_rate), float(inflation_rate_std_dev)
+                    )
+                    # Clamp to reasonable bounds (0% to 15%)
+                    inflation_rate = max(0.0, min(15.0, inflation_rate))
+                    yearly_inflation.append(Decimal(str(inflation_rate)))
 
             # Run projection with these random rates
             final_value, total_contributions, avg_return, avg_inflation = (
@@ -491,7 +536,10 @@ class MonteCarloService:
                     }
                 )
 
-        # Calculate statistics
+        # Calculate statistics from actual bootstrap results
+        # All percentiles and statistics come from actual final_values (real bootstrap results)
+        # Calculate statistics from actual bootstrap results
+        # All percentiles and statistics come from actual final_values (real bootstrap results)
         final_values_sorted = sorted(final_values)
         mean_value = Decimal(str(statistics.mean(final_values)))
         median_value = Decimal(str(statistics.median(final_values)))
@@ -544,18 +592,40 @@ class MonteCarloService:
             target_goal=target_goal,
         )
 
-        # Store individual iterations if requested
+        # Store individual iterations
+        # For bootstrap simulations, ALWAYS store final values for accurate visualization
+        # This ensures the histogram shows actual bootstrap results
+        max_iterations_to_store = 10000  # Reasonable limit to avoid database bloat
+
         if store_iterations:
+            # Store full iteration data if requested
             for iter_data in iterations_data:
-                MonteCarloIteration.objects.create(
-                    simulation=simulation,
-                    iteration_number=iter_data["iteration_number"],
-                    final_value=iter_data["final_value"],
-                    total_contributions=iter_data["total_contributions"],
-                    total_gains=iter_data["total_gains"],
-                    avg_return_rate=iter_data["avg_return_rate"],
-                    avg_inflation_rate=iter_data["avg_inflation_rate"],
-                )
+                if iter_data["iteration_number"] <= max_iterations_to_store:
+                    MonteCarloIteration.objects.create(
+                        simulation=simulation,
+                        iteration_number=iter_data["iteration_number"],
+                        final_value=iter_data["final_value"],
+                        total_contributions=iter_data["total_contributions"],
+                        total_gains=iter_data["total_gains"],
+                        avg_return_rate=iter_data["avg_return_rate"],
+                        avg_inflation_rate=iter_data["avg_inflation_rate"],
+                    )
+        elif use_bootstrap and number_of_iterations <= max_iterations_to_store:
+            # For bootstrap simulations, automatically store final values (not full iteration data)
+            # This enables accurate histogram visualization based on actual bootstrap results
+            for idx, final_val in enumerate(final_values):
+                if idx < max_iterations_to_store:
+                    MonteCarloIteration.objects.create(
+                        simulation=simulation,
+                        iteration_number=idx + 1,
+                        final_value=Decimal(str(final_val)),
+                        total_contributions=Decimal(
+                            "0"
+                        ),  # Minimal data, just final values
+                        total_gains=Decimal("0"),
+                        avg_return_rate=Decimal("0"),
+                        avg_inflation_rate=Decimal("0"),
+                    )
 
         return simulation
 

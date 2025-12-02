@@ -48,6 +48,32 @@
                     <h3>Simulation Parameters</h3>
                 </div>
                 <div class="card-content">
+                    {% if is_likely_bootstrap %}
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid #3b82f6; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.5rem;">📊</span>
+                            <div>
+                                <strong style="color: #1e40af; font-size: 1.1rem;">Historical Data Bootstrap Method</strong>
+                                <p style="color: #1e3a8a; margin: 0.25rem 0 0 0; font-size: 0.9rem;">
+                                    This simulation used empirical bootstrap sampling from real historical stock market and inflation data. 
+                                    The distribution shows right-skewed characteristics typical of actual market returns.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-left: 4px solid #6b7280; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.5rem;">📈</span>
+                            <div>
+                                <strong style="color: #374151; font-size: 1.1rem;">Normal Distribution Method</strong>
+                                <p style="color: #4b5563; margin: 0.25rem 0 0 0; font-size: 0.9rem;">
+                                    This simulation used normal distribution approximation for returns and inflation.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
                         <div class="stat-item" style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); border-left: 4px solid #6366f1; padding: 1rem; border-radius: 8px;">
                             <label style="color: #4338ca; font-weight: 600; display: block; margin-bottom: 0.5rem;">Scenario:</label>
@@ -193,13 +219,28 @@
                 <div class="card-header">
                     <h3>Distribution Visualization</h3>
                     <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">
-                        Probability distribution of final portfolio values across all {{ simulation.number_of_iterations|floatformat:0 }} iterations
+                        {% if is_likely_bootstrap %}
+                        Probability distribution showing right-skewed characteristics from historical bootstrap data
+                        {% else %}
+                        Probability distribution of final portfolio values (normal approximation)
+                        {% endif %}
+                        across all {{ simulation.number_of_iterations|floatformat:0 }} iterations
                     </p>
                 </div>
                 <div class="card-content">
                     <div class="chart-container">
                         <canvas id="distributionChart" width="400" height="200"></canvas>
                     </div>
+                    {% if is_likely_bootstrap %}
+                    <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 6px;">
+                        <p style="margin: 0; color: #0c4a6e; font-size: 0.9rem;">
+                            <strong>📊 Right-Skewed Distribution:</strong> The mean ({{ simulation.mean_final_value|floatformat:0|intcomma }}) 
+                            is {{ skewness_ratio|floatformat:1 }}x the median ({{ simulation.median_final_value|floatformat:0|intcomma }}), 
+                            indicating a long tail on the right. This is typical of stock market returns where occasional large gains 
+                            pull the average higher than the typical outcome.
+                        </p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -256,45 +297,6 @@
                 </div>
             </div>
 
-            {% if iterations %}
-            <!-- Iterations Table (if stored) -->
-            <div class="card form-card">
-                <div class="card-header">
-                    <h3>Individual Iterations (Sample)</h3>
-                    <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">
-                        Showing first 100 iterations ({{ iterations|length }} total stored)
-                    </p>
-                </div>
-                <div class="card-content">
-                    <div class="table-responsive">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th>Iteration</th>
-                                    <th>Final Value</th>
-                                    <th>Total Contributions</th>
-                                    <th>Total Gains</th>
-                                    <th>Avg Return Rate</th>
-                                    <th>Avg Inflation Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for iteration in iterations|slice:":100" %}
-                                <tr>
-                                    <td>{{ iteration.iteration_number }}</td>
-                                    <td>${{ iteration.final_value|floatformat:2|intcomma }}</td>
-                                    <td>${{ iteration.total_contributions|floatformat:2|intcomma }}</td>
-                                    <td>${{ iteration.total_gains|floatformat:2|intcomma }}</td>
-                                    <td>{{ iteration.avg_return_rate|floatformat:2 }}%</td>
-                                    <td>{{ iteration.avg_inflation_rate|floatformat:2 }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
 
             <div class="navigation-actions">
                 <div class="action-buttons">
@@ -366,70 +368,257 @@
             }
         });
 
-        // Distribution Chart - Simplified bell curve visualization
+        // Distribution Chart - Right-skewed or normal visualization
         const distCtx = document.getElementById('distributionChart').getContext('2d');
         
-        // Create a simplified normal distribution visualization
-        // Using mean and std dev to create sample points
         const mean = {{ simulation.mean_final_value|floatformat:0 }};
         const stdDev = {{ simulation.std_dev_final_value|floatformat:0 }};
+        const median = {{ simulation.median_final_value|floatformat:0 }};
         const min = {{ simulation.percentile_5|floatformat:0 }};
         const max = {{ simulation.percentile_95|floatformat:0 }};
+        const skewRatio = {{ skewness_ratio|floatformat:2 }};
         
-        // Create sample data points for visualization
-        const samplePoints = [];
-        const labels = [];
-        for (let i = 0; i < 20; i++) {
-            const value = min + (max - min) * (i / 19);
-            labels.push('$' + Math.round(value/1000) + 'k');
-            // Simplified normal distribution curve
-            const z = (value - mean) / stdDev;
-            const density = Math.exp(-0.5 * z * z);
-            samplePoints.push(density * 1000); // Scale for visualization
-        }
+        // Since bootstrap is now the DEFAULT method, ALWAYS use bootstrap visualization
+        // The simulation uses bootstrap by default, so always show right-skewed distribution
+        const useBootstrapViz = true; // Bootstrap is the default method now
         
-        const distributionChart = new Chart(distCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Probability Density',
-                    data: samplePoints,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Estimated Probability Distribution (Normal Approximation)'
-                    },
-                    legend: {
-                        display: false
+        // Get iteration data if available
+        const iterationData = {{ iteration_values_json|safe }};
+        
+        let distributionChart;
+        
+        // Always use bootstrap visualization since it's the default method
+        if (useBootstrapViz) {
+            // Bootstrap method - show actual bootstrap results
+            // Always prefer showing actual histogram from iteration data
+            if (iterationData && iterationData.length > 0) {
+                // Create histogram from actual iteration data
+                // Use actual min/max from data to avoid binning artifacts at edges
+                const actualMin = Math.min(...iterationData);
+                const actualMax = Math.max(...iterationData);
+                const dataRange = actualMax - actualMin;
+                
+                // Adaptive number of bins based on data size (but not too many)
+                const numBins = Math.min(35, Math.max(25, Math.floor(Math.sqrt(iterationData.length))));
+                const binWidth = dataRange / numBins;
+                const bins = new Array(numBins).fill(0);
+                const binLabels = [];
+                
+                // Count values in each bin with proper edge handling
+                iterationData.forEach(value => {
+                    // Calculate bin index (0 to numBins-1)
+                    let binIndex = Math.floor((value - actualMin) / binWidth);
+                    // Handle edge cases properly
+                    // Values at exactly max should go in last bin, others should be clamped
+                    if (binIndex >= numBins) {
+                        binIndex = numBins - 1;
                     }
+                    // Also handle case where value equals min (should go in first bin)
+                    if (value === actualMin) {
+                        binIndex = 0;
+                    }
+                    bins[binIndex]++;
+                });
+                
+                // Create labels for bins (show midpoint of each bin for clarity)
+                // Format labels: use millions if >= 1M, otherwise use thousands
+                function formatLabel(value) {
+                    if (value >= 1000000) {
+                        return '$' + (value / 1000000).toFixed(1) + 'M';
+                    } else {
+                        return '$' + Math.round(value / 1000) + 'k';
+                    }
+                }
+                
+                for (let i = 0; i < numBins; i++) {
+                    const binStart = actualMin + i * binWidth;
+                    const binMidpoint = binStart + binWidth / 2;
+                    // Only show every Nth label to avoid clutter
+                    if (i === 0 || i === numBins - 1 || i % Math.ceil(numBins / 15) === 0) {
+                        binLabels.push(formatLabel(binMidpoint));
+                    } else {
+                        binLabels.push('');
+                    }
+                }
+                
+                distributionChart = new Chart(distCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: binLabels,
+                        datasets: [{
+                            label: 'Frequency',
+                            data: bins,
+                            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                            borderColor: '#10b981',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Right-Skewed Distribution from Historical Bootstrap Data',
+                                font: { size: 15, weight: 'bold', color: '#059669' }
+                            },
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true,
+                                displayColors: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: '#10b981',
+                                borderWidth: 1,
+                                callbacks: {
+                                    title: function(context) {
+                                        // Show consistent title for all bars
+                                        return 'Portfolio Value Range';
+                                    },
+                                    label: function(context) {
+                                        const binStart = actualMin + context.dataIndex * binWidth;
+                                        const binEnd = binStart + binWidth;
+                                        
+                                        // Format values: use millions if >= 1M, otherwise use thousands
+                                        function formatValue(value) {
+                                            if (value >= 1000000) {
+                                                return '$' + (value / 1000000).toFixed(2) + 'M';
+                                            } else {
+                                                return '$' + Math.round(value / 1000) + 'k';
+                                            }
+                                        }
+                                        
+                                        const iterations = context.parsed.y;
+                                        return [
+                                            `Range: ${formatValue(binStart)} - ${formatValue(binEnd)}`,
+                                            `Iterations: ${iterations}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Iterations'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Final Portfolio Value'
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // No iteration data stored - show a note about this
+                // In bootstrap mode, iterations should be stored for accurate visualization
+                distributionChart = new Chart(distCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Note'],
+                        datasets: [{
+                            label: 'No Data',
+                            data: [0],
+                            backgroundColor: 'rgba(156, 163, 175, 0.5)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Historical Bootstrap Results - Iteration Data Not Stored',
+                                font: { size: 14, weight: 'bold', color: '#6b7280' }
+                            },
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                
+                // Add a message to the page
+                const chartContainer = document.querySelector('.chart-container');
+                if (chartContainer) {
+                    chartContainer.innerHTML += '<div style="margin-top: 1rem; padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;"><p style="margin: 0; color: #92400e;"><strong>Note:</strong> This simulation used historical bootstrap data, but iteration values were not stored. Percentiles shown are from actual bootstrap results. Enable "Store Iterations" option when running simulations to see the full distribution histogram.</p></div>';
+                }
+            }
+        } else {
+            // Normal distribution method
+            const numPoints = 40;
+            const samplePoints = [];
+            const labels = [];
+            
+            for (let i = 0; i < numPoints; i++) {
+                const value = min + (max - min) * (i / (numPoints - 1));
+                labels.push('$' + Math.round(value/1000) + 'k');
+                
+                // Normal distribution (bell curve)
+                const z = (value - mean) / stdDev;
+                const density = Math.exp(-0.5 * z * z);
+                samplePoints.push(density * 1000);
+            }
+            
+            distributionChart = new Chart(distCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Probability Density',
+                        data: samplePoints,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
+                options: {
+                    responsive: true,
+                    plugins: {
                         title: {
                             display: true,
-                            text: 'Relative Probability'
+                            text: 'Normal Distribution (Normal Approximation Method)',
+                            font: { size: 15, weight: 'bold', color: '#2563eb' }
+                        },
+                        legend: {
+                            display: false
                         }
                     },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Final Portfolio Value'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Relative Probability'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Final Portfolio Value'
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     </script>
 </body>
 </html>
